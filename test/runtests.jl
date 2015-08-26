@@ -1,5 +1,10 @@
 using WaterData
-using Base.Test
+using FactCheck
+FactCheck.setstyle(:compact)
+FactCheck.clear_results()
 
-# write your own tests here
-@test 1 == 1
+include("test_util.jl")
+include("test_tables.jl")
+include("test_phaseboundaries.jl")
+
+FactCheck.exitstatus()
