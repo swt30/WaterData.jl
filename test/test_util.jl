@@ -1,6 +1,9 @@
 using FactCheck
 import WaterData
 
+
+# FactCheck helper functions (usable in all tests)
+
 "Closure to check if something is between `a` and `b`"
 function between(a, b)
     @assert a < b
@@ -14,6 +17,9 @@ end
 
 "Placeholder function so that we can test that something doesn't error"
 noerror(x) = true
+
+
+# Tests on util.jl
 
 facts("FactCheck helper functions") do
     context("`between`") do
@@ -83,8 +89,57 @@ facts("Utility functions") do
 
     context("Bounding boxes") do
         bb = WaterData.BoundingBox(1,2,0,3)
-        @fact in(1.5, 1.5, bb) --> true
-        @fact in(0, 0, bb) --> false
+        @fact (1.5, 1.5) in bb --> true
+        @fact (0, 0) in bb --> false
+        infbox = WaterData.BoundingBox(-2.5, 2.5, -Inf, Inf)
+        @fact (1, 4) in infbox --> true
+        @fact (-2, 3e9) in infbox --> true
+        @fact (-8, 0) in infbox --> false
+    end
+
+    context("Polygon inclusion testing") do
+        xs = [1, 5, 5, 4, 3, 2, 1]
+        ys = [1, 1, 3, 2, 3, 2, 3]
+        poly = WaterData.Polygon(xs, ys)
+
+        # outside bounding box
+        @fact (0, 0) in poly --> false
+        @fact (6, 2) in poly --> false
+        # clearly inside, non-pathological
+        @fact (1.5, 1.5) in poly --> true
+        @fact (3, 2.5) in poly --> true
+        @fact (4.5, 1.5) in poly --> true
+        # outside, but within bounding box, non-pathological
+        @fact (2, 2.5) in poly --> false
+        @fact (4, 2.5) in poly --> false
+        # outside, pathogical cases
+        @fact (0, 1) in poly --> false
+        @fact (0, 2) in poly --> false
+        @fact (0, 3) in poly --> false
+        @fact (6, 1) in poly --> false
+        @fact (6, 2) in poly --> false
+        @fact (6, 3) in poly --> false
+        # inside, pathological cases
+        @fact (3, 2) in poly --> true
+        @fact (1.5, 2) in poly --> true
+
+        # one more to convince myself it works
+        xs = [1, 2, 3, 4, 5, 5, 4, 3, 2, 1]
+        ys = [3, 3, 4, 3, 3, 2, 2, 1, 2, 2]
+        poly = WaterData.Polygon(xs, ys)
+
+        # outside bounding box
+        @fact (-3, -2) in poly --> false 
+        # clearly inside, non-pathological
+        @fact (2.5, 2.5) in poly --> true
+        # outside, but within bounding box, non-pathological
+        @fact (1.5, 3.5) in poly --> false
+        # outside, pathogical cases
+        @fact (1, 4) in poly --> false
+        @fact (0, 3) in poly --> false
+        # inside, pathological cases
+        @fact (3, 2) in poly --> true
+        @fact (3, 3) in poly --> true
     end
 
     context("Normalisation functions") do

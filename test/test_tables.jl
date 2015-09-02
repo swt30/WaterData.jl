@@ -1,10 +1,13 @@
 using FactCheck
 import WaterData
 
-facts("Table tests") do
+
+# Tests on tables.jl
+
+facts("Tabular equations of state") do
     # make some basic EOS grids
-    gridtable = WaterData.GriddedTabularEOS([1.,2,3], [1.,2,3], [1. 1 1; 1 1 1; 1 1 1])
-    nongridtable = WaterData.UnstructuredTabularEOS([1.,2,2,3], [1.,1,2,2], [1.,2,2,3])
+    gridtable = WaterData.GridEOS([1.,2,3], [1.,2,3], [1. 1 1; 1 1 1; 1 1 1])
+    nongridtable = WaterData.UnstructuredEOS([1.,2,2,3], [1.,1,2,2], [1.,2,2,3])
     
     context("Checking if a point is in a table") do
         @fact in(2, 2, gridtable) --> true

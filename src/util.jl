@@ -1,5 +1,6 @@
 using VoronoiDelaunay, Iterators
 
+
 # Miscellaneous utility funcs
 
 typealias VectorPair{T} NTuple{2, Vector{T}}
@@ -15,8 +16,8 @@ crossprod2d(v::Vector, w::Vector) = v[1]*w[2] - v[2]*w[1]
 
 "Check if the line segments `AB` and `CD` cross"
 function intersects(A::Vector, B::Vector, C::Vector, D::Vector)
-    # AB is p -> p + r
-    # CD is q -> q + s
+    # AB is the line from p to p + r
+    # CD is the line from q to q + s
     p = A
     r = B - A
     q = C
@@ -37,11 +38,13 @@ function intersects(A::Vector, B::Vector, C::Vector, D::Vector)
 end
 intersects(AB::VectorPair, CD::VectorPair) = intersects(AB[1], AB[2], CD[1], CD[2])
 
+
 # Duplicate-finding
 
 """ Get indices of the unique items in `itr`. For non-unique items, returns the
     highest index. """
 unique_indices(itr) = indexin(collect(unique(itr)), collect(itr))
+
 
 # Mapping to the interval (1+eps(), 2-2*eps())
 
@@ -63,19 +66,13 @@ lognorm12(x::Vector) = norm12(log10(x))
 "Map the log of `x` from (1.0, 2.0) back to [`lb`, `ub`]"
 unlognorm(x, lb, ub) = 10^unnorm(x, log10(lb), log10(ub))
 
+
 # Tessellations
 
 typealias Tessellation DelaunayTessellation2D
 
-immutable BoundingBox
-    xmin::Float64
-    xmax::Float64
-    ymin::Float64
-    ymax::Float64
-end
 BoundingBox(t::Tessellation) = BoundingBox(min_coord, max_coord, min_coord, max_coord)
 
-Base.in(x, y, bb::BoundingBox) = (bb.xmin <= x <= bb.xmax) && (bb.ymin <= y <= bb.ymax) 
 function Base.in(xn, yn, tess::Tessellation)
     if !in(xn, yn, BoundingBox(tess))
         return false

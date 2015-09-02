@@ -7,15 +7,12 @@ include("constants.jl")
 include("phaseboundaries.jl")
 include("tables.jl")
 include("functions.jl")
+include("thermalexpansivity.jl")
+include("combined.jl")
 
-eoses = load("$(config.datadir)/eoses.jld")
-const iapws = eoses["iapws"]
-const sugimura = eoses["sugimura"]
-const feistelwagner = eoses["feistelwagner"]
-const french = eoses["french"]
-
-phaseboundaries = load("$(config.datadir)/phase-boundaries.jld")
-const evaporation = phaseboundaries["iapws"]
-const freezing = phaseboundaries["dunaeva"]
+load_tablular_eoses() = load("$(config.datadir)/eos-tabular.jld")
+load_phaseboundaries() = load("$(config.datadir)/phaseboundaries.jld")
+load_functional_eoses() = load("$(config.datadir)/eos-functional.jld")
+load_full_eos() = load("$(config.datadir)/eos-full.jld")
 
 end # module

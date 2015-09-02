@@ -1,5 +1,8 @@
 using Dierckx
 
+
+# Phase boundary names and parameters
+
 "A dictionary mapping phase names to short codes, like 'L' for liquid"
 const phase_mappings = let
     keys = ["liquid", "ice I", "ice II", "ice III",
@@ -13,7 +16,7 @@ const phase_mappings = let
 end
 
 "Phase boundary parameter table from Dunaeva et al"
-function load_phase_boundary_table()
+function read_phase_boundary_table()
     readdlm("$(config.rawdata)/Dunaeva-phase-boundaries.dat")
 end
 
@@ -34,7 +37,7 @@ end
 function PhaseBoundaryPars(phase1::String, phase2::String)
     # Read a phase boundary from file
     # TODO: re-document this constructor once permitted
-    table = load_phase_boundary_table()
+    table = read_phase_boundary_table()
 
     match11 = (table[:, 1] .== phase1)
     match22 = (table[:, 2] .== phase2)
@@ -49,6 +52,9 @@ function PhaseBoundaryPars(phase1::String, phase2::String)
 
     PhaseBoundaryPars(row...)
 end
+
+
+# Phase boundary definitions
 
 "Holds details about the boundary between two phases"
 abstract PhaseBoundary
@@ -131,8 +137,11 @@ function intersects(AB::VectorPair, pb::PhaseBoundary)
     any(CD -> intersects(AB, CD), linesegments)
 end
 
-function save_phase_boundaries_to_file!()
-    dunaeva_table = load_phase_boundary_table()
+
+# Save phase boundaries to file
+
+function save_phase_boundaries!()
+    dunaeva_table = read_phase_boundary_table()
     dunaeva_boundaries = maprows(dunaeva_table) do row
         p1, p2 = row[1:2]
         PhaseBoundary(p1, p2)
@@ -149,4 +158,6 @@ function save_phase_boundaries_to_file!()
                       "dunaeva"=>dunaeva_boundaries)
 
     save("$(config.datadir)/phase-boundaries.jld", boundaries)
+
+    return nothing
 end

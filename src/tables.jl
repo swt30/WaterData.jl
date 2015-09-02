@@ -1,36 +1,52 @@
 using DataFrames, JLD, VoronoiDelaunay, Dierckx
-import GeometricalPredicates
+import GeometricalPredicates # TODO: is this necessary any more?
+# it's possible that it may be needed so the JLD files can load correctly
+
+
+# EOS types
 
 "Equation of State table"
 abstract TabularEOS <: EOS
 
 "Equation of state table defined by unstructured (P, T, ρ) points"
-type UnstructuredTabularEOS <: TabularEOS
+immutable UnstructuredEOS <: TabularEOS
     P::Vector{Float64}
     T::Vector{Float64}
     ρ::Vector{Float64}
     tess::Tessellation
 
-    function UnstructuredTabularEOS(P, T, ρ)
+    function UnstructuredEOS(P, T, ρ)
         u = unique_indices(zip(P, T))
         new(P[u], T[u], ρ[u], get_tessellation(P[u], T[u], uselog=true))
     end
 end
 
 "Equation of state table defined on a (P, T) grid"
-type GriddedTabularEOS <: TabularEOS
+immutable GridEOS <: TabularEOS
     P::Vector{Float64}
     T::Vector{Float64}
     ρ::Matrix{Float64}
     spline::Spline2D
 
-    GriddedTabularEOS(P, T, ρ) = new(P, T, ρ, Spline2D(P, T, ρ, kx=1, ky=1))
+    GridEOS(P, T, ρ) = new(P, T, ρ, Spline2D(P, T, ρ, kx=1, ky=1))
 end
+
+"Equation of state table defined on a pressure grid"
+immutable LineEOS <: TabularEOS
+    P::Vector{Float64}
+    ρ::Vector{Float64}
+    spline::Spline1D
+
+    LineEOS(P, ρ) = new(P, ρ, Spline1D(P, ρ, k=1))
+end
+
+
+# Testing for inclusion
 
 "Bounding box for a given TabularEOS"
 BoundingBox(e::TabularEOS) = BoundingBox(extrema(e.P)..., extrema(e.T)...)
 
-function Base.in(P, T, eos::UnstructuredTabularEOS)
+function Base.in(P, T, eos::UnstructuredEOS)
     if !in(P, T, BoundingBox(eos))
         return false
     else
@@ -38,11 +54,14 @@ function Base.in(P, T, eos::UnstructuredTabularEOS)
         return in(xn, yn, eos.tess)
     end
 end
-Base.in(P, T, eos::GriddedTabularEOS) = in(P, T, BoundingBox(eos))
+Base.in(P, T, eos::GridEOS) = in(P, T, BoundingBox(eos))
+
+
+# Save EOS data to file
 
 "Load EOS data from tabular format and save to JLD files"
-function save_eoses_to_file!()
-    jldopen("$(config.datadir)/eoses.jld", "w") do file
+function save_tabular_eoses!()
+    jldopen("$(config.datadir)/eos-tabular.jld", "w") do file
         file["sugimura"] = let
             df = readtable("$(config.rawdata)/Sugimura.eos", allowcomments=true, separator=',')
             P = collect(df[:P]) # in GPa
@@ -51,7 +70,7 @@ function save_eoses_to_file!()
 
             P = P * 1e9 # now in Pa
 
-            UnstructuredTabularEOS(P, T, ρ)
+            UnstructuredEOS(P, T, ρ)
         end
 
         file["feistelwagner"] = let
@@ -62,7 +81,7 @@ function save_eoses_to_file!()
 
             P = P * 1e6
 
-            UnstructuredTabularEOS(P, T, ρ)
+            UnstructuredEOS(P, T, ρ)
         end
 
         file["french"] = let
@@ -74,7 +93,7 @@ function save_eoses_to_file!()
             P = P * 1e8 # now in Pa
             ρ = ρ * 1e3 # now in kg/m^3
 
-            UnstructuredTabularEOS(P, T, ρ)
+            UnstructuredEOS(P, T, ρ)
         end
 
         file["iapws"] = let
@@ -85,12 +104,23 @@ function save_eoses_to_file!()
 
             P = P * 1e6 # now in Pa
 
-            UnstructuredTabularEOS(P, T, ρ)
+            UnstructuredEOS(P, T, ρ)
+        end
+
+        file["seager_dft"] = let
+            df = readtable("$(config.rawdata)/seager-h2o-dft.eos")
+            P = collect(df[:P])
+            ρ = collect(df[:rho])
+
+            LineEOS(P, ρ)
         end
     end
 
     return nothing
 end
+
+
+# Normalisation
 
 "Log-normalise `P` and `T` to the shifted 2D unit square (1.0, 2.0), (1.0, 2.0)"
 function lognorm12(P, T, eos::TabularEOS)
@@ -111,6 +141,9 @@ function unlognorm(xn, yn, eos::TabularEOS)
 
     P, T
 end
+
+
+# Interpolation and evaluation of the EOS
 
 "Get the density from the `eos` at a particular `vertex` in its tessellation"
 function ρ_atvertex(vertex, eos)
@@ -136,7 +169,7 @@ function lininterp(tri, eos, xn, yn)
 end
 
 "Linear interpolation of an equation of state `eos` at values `P` and `T`"
-function lininterp(eos::UnstructuredTabularEOS, P, T)
+function lininterp(eos::UnstructuredEOS, P, T)
     if !in(P, T, BoundingBox(eos))
         return NaN
     end
@@ -151,12 +184,14 @@ end
 
 """ Put the `eos` on a grid of a given `resolution` (default
     $(config.grid_resolution))"""
-function grid(eos::UnstructuredTabularEOS, resolution=config.grid_resolution)
+function grid(eos::UnstructuredEOS, resolution=config.grid_resolution)
     P = logspace(extrema(log10(eos.P))..., resolution)
     T = logspace(extrema(log10(eos.T))..., resolution)
     @time ρ = Float64[lininterp(eos, P, T) for P in P, T in T]
-    GriddedTabularEOS(P, T, ρ)
+    GridEOS(P, T, ρ)
 end
 
-call(eos::UnstructuredTabularEOS, P, T) = lininterp(eos, P, T)
-call(eos::GriddedTabularEOS, P, T) = evaluate(eos.spline, P, T)
+Base.call(eos::UnstructuredEOS, P, T) = lininterp(eos, P, T)
+Base.call(eos::GridEOS, P, T) = evaluate(eos.spline, P, T)
+Base.call(eos::LineEOS, P) = evaluate(eos.spline, P)
+Base.call(eos::LineEOS, P, T) = evaluate(eos.spline, P, T)
