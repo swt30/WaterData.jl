@@ -1,4 +1,9 @@
+# phaseboundaries.jl
+# Calculate and use phase boundaries for water
+
 using Dierckx
+
+export PhaseBoundary
 
 
 # Phase boundary names and parameters
@@ -15,7 +20,7 @@ const phase_mappings = let
     phase_mappings = merge!(phasemap, shortmap)
 end
 
-"Phase boundary parameter table from Dunaeva et al"
+"Read in phase boundary parameter table from Dunaeva et al"
 function read_phase_boundary_table()
     readdlm("$(config.rawdata)/Dunaeva-phase-boundaries.dat")
 end

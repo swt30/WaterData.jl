@@ -1,6 +1,9 @@
+# eos-tables.jl
+# Tabular equations of state
+
 using DataFrames, JLD, VoronoiDelaunay, Dierckx
-import GeometricalPredicates # TODO: is this necessary any more?
-# it's possible that it may be needed so the JLD files can load correctly
+
+export UnstructuredEOS, GridEOS, LineEOS
 
 
 # EOS types
@@ -66,9 +69,10 @@ function save_tabular_eoses!()
             df = readtable("$(config.rawdata)/Sugimura.eos", allowcomments=true, separator=',')
             P = collect(df[:P]) # in GPa
             T = collect(df[:T]) # in K
-            ρ = collect(df[:rho]) # in kg/m^3
+            ρ = collect(df[:rho]) # in g/cm^3
 
             P = P * 1e9 # now in Pa
+            ρ = ρ * 1e3 # now in kg/m^3
 
             UnstructuredEOS(P, T, ρ)
         end
@@ -79,7 +83,7 @@ function save_tabular_eoses!()
             T = collect(df[:temperature]) # in K
             ρ = collect(df[:density]) # in kg/m^3
 
-            P = P * 1e6
+            P = P * 1e6 # now in Pa
 
             UnstructuredEOS(P, T, ρ)
         end
@@ -191,7 +195,15 @@ function grid(eos::UnstructuredEOS, resolution=config.grid_resolution)
     GridEOS(P, T, ρ)
 end
 
-Base.call(eos::UnstructuredEOS, P, T) = lininterp(eos, P, T)
-Base.call(eos::GridEOS, P, T) = evaluate(eos.spline, P, T)
-Base.call(eos::LineEOS, P) = evaluate(eos.spline, P)
-Base.call(eos::LineEOS, P, T) = evaluate(eos.spline, P, T)
+""" Take a slice of a `GridEOS` at a given temperature, turning it into
+    a `LineEOS`. """
+function slice(eos::GridEOS, T)
+    Ps = eos.P
+    ρs = map(P -> eos(P, T), Ps)
+    LineEOS(Ps, ρs)
+end
+
+Base.call(eos::UnstructuredEOS, P::Real, T::Real) = lininterp(eos, P, T)
+Base.call(eos::GridEOS, P::Real, T::Real) = evaluate(eos.spline, P, T)
+Base.call(eos::LineEOS, P::Real) = evaluate(eos.spline, P)
+Base.call(eos::LineEOS, P::Real, T::Real) = evaluate(eos.spline, P, T)

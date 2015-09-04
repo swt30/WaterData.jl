@@ -1,5 +1,6 @@
 using FactCheck
 import WaterData
+import WaterData.testhelpers: between
 
 
 # Tests on tables.jl
@@ -8,7 +9,7 @@ facts("Tabular equations of state") do
     # make some basic EOS grids
     gridtable = WaterData.GridEOS([1.,2,3], [1.,2,3], [1. 1 1; 1 1 1; 1 1 1])
     nongridtable = WaterData.UnstructuredEOS([1.,2,2,3], [1.,1,2,2], [1.,2,2,3])
-    
+
     context("Checking if a point is in a table") do
         @fact in(2, 2, gridtable) --> true
         @fact in(2, 2, WaterData.BoundingBox(gridtable)) --> true

@@ -2,8 +2,6 @@ using FactCheck
 import WaterData
 
 
-# Tests on functions.jl
-
 facts("Functional equations of state") do
     context("TFD") do
         # our sample pressures

@@ -2,8 +2,6 @@ using FactCheck
 import WaterData
 
 
-# Tests on phaseboundaries.jl
-
 facts("Phase boundaries") do
     context("have correct long-short code mappings") do
         iskeyof(dict) = k -> k in keys(dict)

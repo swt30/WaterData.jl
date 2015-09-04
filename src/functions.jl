@@ -3,13 +3,19 @@ using JLD         # for loading and saving
 using Roots       # for numerical inversion
 using Calculus: derivative
 
+export ChoukrounGrasset, PolytropicEOS,
+    BME, BME3, BME4, Vinet, TFD,
+    IAPWS,
+    BoundedEOS, MGDPressureEOS
+
+
 # Shared variables
 
 "Range of ρ (in kg/m^3) to consider when doing numerical inversion of ρ(P)"
-const inversion_density_range = (1e-3, 1e14)
+const inversion_density_range = (1e-3, 1e7)
 
 
-# Functional EOS hierarchy
+# Functional EOS type hierarchy
 
 abstract FunctionalEOS <: EOS
 abstract InverseFunctionalEOS <: FunctionalEOS
@@ -30,7 +36,7 @@ function ChoukrounGrasset(Pref, Tref, V₀, aT₁, aT₂, aT₃, aT₄, P₀, aP
     ChoukrounGrasset(Pref, Tref, V₀, [aT₁, aT₂, aT₃, aT₄], P₀, [aP₁, aP₂, aP₃, aP₄])
 end
 
-"The polytropic EOS ρ = P₀ + aP^n"
+"The polytropic EOS, ρ(P) = P₀ + aP^2"
 immutable PolytropicEOS <: FunctionalEOS
     ρ₀::Float64
     a::Float64
@@ -84,7 +90,7 @@ immutable TFD{N<:Integer} <: FunctionalEOS
     end
 end
 # default constructor
-function TFD{N<:Integer}(Z::Vector{N}, A::Vector, 
+function TFD{N<:Integer}(Z::Vector{N}, A::Vector,
                          n::Vector=ones(length(Z)))
     TFD{N}(Z, A, n)
 end
@@ -93,7 +99,7 @@ function TFD(Z::Integer, A)
     TFD([Z], [A])
 end
 
-"The IAPWS EOS formulation"
+"The IAPWS EOS, functional formulation"
 immutable IAPWS <: InverseFunctionalEOS
     c::Vector{Float64}
     d::Vector{Float64}
@@ -116,8 +122,31 @@ function IAPWS(data::Matrix{Float64}, ρmin, ρmax)
     @assert size(data) == (56, 14)
     IAPWS([data[:, i] for i=1:14]..., ρmin, ρmax)
 end
-    
 
+
+# Wrapper for indicating a bounding box around a functional EOS
+
+immutable BoundedEOS <: EOS
+    eos::FunctionalEOS
+    extent::Region
+end
+BoundingBox(b::BoundedEOS) = BoundingBox(b.extent)
+
+# Wrapper EOS for including thermal pressure
+
+immutable MGDPressureEOS <: InverseFunctionalEOS
+    eos::Union(BME, Vinet)
+    T₀::Float64
+    θD₀::Float64
+    γ₀::Float64
+    q::Int
+    n::Int
+end
+
+
+# Helper functions for EOS evaluation
+
+# supporting functions for IAPWS density/temperature
 "Get density from dimensionless density"
 ρ_from_δ(δ) = δ * ρc
 "Get dimensionless density from density"
@@ -140,68 +169,50 @@ function θ(I::IAPWS, δ, τ, i)
 end
 function Δ(I::IAPWS, δ, τ, i)
     let θᵢ = θ(I, δ, τ, i), Bᵢ = I.B[i], aᵢ = I.a[i]
+
         θᵢ^2 + Bᵢ*((δ-1)^2)^aᵢ
     end
 end
 function ϕr1(I::IAPWS, δ, τ, i)
     let nᵢ = I.n[i], dᵢ = I.d[i], tᵢ = I.t[i]
+
         nᵢ * δ^dᵢ * τ^tᵢ
     end
 end
 function ϕr2(I::IAPWS, δ, τ, i)
     let nᵢ = I.n[i], dᵢ = I.d[i], tᵢ = I.t[i], cᵢ = I.c[i]
+
         nᵢ * δ^dᵢ * τ^tᵢ * exp(-δ^cᵢ)
     end
 end
 function ϕr3(I::IAPWS, δ, τ, i)
     let nᵢ = I.n[i], dᵢ = I.d[i], tᵢ = I.t[i], cᵢ = I.c[i],
         αᵢ = I.α[i], εᵢ = I.ε[i], βᵢ = I.β[i], γᵢ = I.γ[i]
-        
+
         nᵢ * δ^dᵢ * τ^tᵢ * exp(-αᵢ*(δ-εᵢ)^2 - βᵢ*(τ-γᵢ)^2)
     end
 end
 function ϕr4(I::IAPWS, δ, τ, i)
     let nᵢ = I.n[i], Δᵢ = Δ(I, δ, τ, i), bᵢ = I.b[i], ψᵢ = ψ(I, δ, τ, i)
+
         nᵢ * Δᵢ^bᵢ * δ * ψᵢ
     end
 end
 
-
 "Residual part of the IAPWS Helmholtz energy"
 function ϕr(I::IAPWS, δ, τ)
+    # we take sums over the functions ϕ1, ϕ2...
     part1 = mapreduce(i -> ϕr1(I, δ, τ, i), (+), 0, 1:7)
     part2 = mapreduce(i -> ϕr2(I, δ, τ, i), (+), 0, 8:51)
     part3 = mapreduce(i -> ϕr3(I, δ, τ, i), (+), 0, 52:54)
     part4 = mapreduce(i -> ϕr4(I, δ, τ, i), (+), 0, 55:56)
 
+    # and then add them all together
     return part1 + part2 + part3 + part4
 end
 
 "Derivative of the IAPWS Helmholtz energy in the density direction"
 dϕrδ(I::IAPWS, δ, τ) = derivative(dδ::Float64 -> ϕr(I, δ + dδ, τ), 0.0)
-
-
-# Wrapper EOS for including the extent of an EOS
-
-immutable BoundedEOS <: EOS
-    eos::FunctionalEOS
-    extent::Region
-end
-BoundingBox(b::BoundedEOS) = BoundingBox(b.extent)
-
-# Wrapper EOS for including thermal pressure
-
-immutable MGDPressureEOS <: InverseFunctionalEOS
-    eos::Union(BME, Vinet)
-    T₀::Float64
-    θD₀::Float64
-    γ₀::Float64
-    q::Int
-    n::Int
-end
-
-
-# Evaluating the EOSes
 
 "Pressure component of the Choukroun-Gras￼set ice EOS"
 function ξP(cg::ChoukrounGrasset, P)
@@ -223,15 +234,15 @@ specificvolume(cg::ChoukrounGrasset, P, T) = cg.V₀ * ξP(cg, P) * ξT(cg, T)
 "Integrand in the MGD expression"
 mgd_integrand(t) = t^3 / (exp(t) - 1)
 
-"Vibrational energy in the MGD expression"
+"Vibrational energy in the MGD expression [J / mol]"
 mgd_Evib(T, n, θD) = 9n*R*T*(T/θD)^3 * quadgk(mgd_integrand, 0, θD/T)[1]
 
 "Thermal pressure component of the MGD"
 function thermalpressure(mgd::MGDPressureEOS, ρ, T)
     let γ₀ = mgd.γ₀,
-        θD₀ = mgd.θD₀, 
-        ρ₀ = mgd.eos.ρ₀, 
-        q = mgd.q, 
+        θD₀ = mgd.θD₀,
+        ρ₀ = mgd.eos.ρ₀,
+        q = mgd.q,
         M = 0.01801528, # kg/mol
         n = mgd.n,
         T₀ = mgd.T₀
@@ -243,31 +254,34 @@ function thermalpressure(mgd::MGDPressureEOS, ρ, T)
     end
 end
 
+
+# Evaluating the EOSes
+
 "Get the pressure of an EOS from a given density"
 function pressure end
 
 function pressure(b::BME3, ρ)
     let ρ₀ = b.ρ₀, K₀ = b.K₀, dK₀ = b.dK₀
-        eta = ρ/ρ₀
-        return  (3/2*K₀*(eta^(7/3) - eta^(5/3))
-                 * (1 + 3/4*(dK₀ - 4)*(eta^(2/3) - 1)))
+        η = ρ/ρ₀
+        return  (3/2*K₀*(η^(7/3) - η^(5/3))
+                 * (1 + 3/4*(dK₀ - 4)*(η^(2/3) - 1)))
     end
 end
 
 function pressure(b::BME4, ρ)
-    let ρ₀ = b.bme3.ρ₀, K₀ = b.bme3.K₀, dK₀ = b.bme3.dK₀, d2K₀ = b.d2K₀, 
-        eta = ρ/ρ₀
-        return pressure(b) + (3/2*K₀*(eta^(7/3) - eta^(5/3))
-                              * 3/8*(eta^(2/3) - 1)^2
+    let ρ₀ = b.bme3.ρ₀, K₀ = b.bme3.K₀, dK₀ = b.bme3.dK₀, d2K₀ = b.d2K₀,
+        η = ρ/ρ₀
+        return pressure(b) + (3/2*K₀*(η^(7/3) - η^(5/3))
+                              * 3/8*(η^(2/3) - 1)^2
                               * (K₀*d2K₀ + dK₀*(dK₀ - 7) + 143/9))
     end
 end
 
 function pressure(v::Vinet, ρ)
     let ρ₀ = v.ρ₀, K₀ = v.K₀, dK₀ = v.dK₀
-        eta = ρ/ρ₀
-        return (3K₀*eta^(2/3) * (1 - eta^(-1/3))
-                * exp(3/2*(dK₀ - 1)*(1 - eta^(-1/3))))
+        η = ρ/ρ₀
+        return (3K₀*η^(2/3) * (1 - η^(-1/3))
+                * exp(3/2*(dK₀ - 1)*(1 - η^(-1/3))))
     end
 end
 
@@ -278,13 +292,13 @@ function pressure(I::IAPWS, ρ, T)
     δ = δ_from_ρ(ρ)
     τ = τ_from_T(T)
 
-    P = ρ * R * T * (1 + δ*dϕrδ(I, δ, τ))
+    P = ρ * R_h2o * T * (1 + δ*dϕrδ(I, δ, τ))
 end
 
 pressure(beos::BoundedEOS, ρ) = pressure(beos.eos, ρ)
 pressure(beos::BoundedEOS, ρ, T) = pressure(beos.eos, ρ, T)
 
-function Base.call(eos::TFD, P)
+function Base.call(eos::TFD, P::Real)
     let Z = eos.Z, A = eos.A, n = eos.n
         # P is in Pa but we want it in dyn/cm^2: 1 Pa = 10 dyn/cm^2
         P *= 10
@@ -332,18 +346,18 @@ function Base.call(eos::TFD, P)
     end
 end
 
-Base.call(eos::TFD, P, T) = eos(P)
+Base.call(eos::TFD, P::Real, T::Real) = eos(P)
 
-function Base.call(cg::ChoukrounGrasset, P, T)
-    P = P/1e6  # Pa -> MPa 
+function Base.call(cg::ChoukrounGrasset, P::Real, T::Real)
+    P = P/1e6  # Pa -> MPa
     density = 1./specificvolume(cg, P, T)
 end
 
-function Base.call(eos::InverseFunctionalEOS, P)
+function Base.call(eos::InverseFunctionalEOS, P::Real)
     fzero(ρ -> pressure(eos, ρ) - P, ρmin(eos), ρmax(eos))
 end
 
-function Base.call(eos::InverseFunctionalEOS, P, T)
+function Base.call(eos::InverseFunctionalEOS, P::Real, T::Real)
     fzero(ρ -> pressure(eos, ρ, T) - P, ρmin(eos), ρmax(eos))
 end
 
@@ -352,15 +366,15 @@ end
 ρmin(mgd::MGDPressureEOS) = ρmin(mgd.eos)
 ρmax(mgd::MGDPressureEOS) = ρmax(mgd.eos)
 
-function Base.call(eos::PolytropicEOS, P)
+function Base.call(eos::PolytropicEOS, P::Real)
     let a = eos.a, ρ₀ = eos.ρ₀, n = eos.n
         return ρ₀ + a*P^n
     end
 end
 
-Base.call(eos::PolytropicEOS, P, T) = eos(P)
-Base.call(beos::BoundedEOS, P) = beos.eos(P)
-Base.call(beos::BoundedEOS, P, T) = beos.eos(P, T)
+Base.call(eos::PolytropicEOS, P::Real, T::Real) = eos(P)
+Base.call(beos::BoundedEOS, P::Real) = beos.eos(P)
+Base.call(beos::BoundedEOS, P::Real, T::Real) = beos.eos(P, T)
 
 
 # Defining the regions within which each function holds
@@ -378,7 +392,7 @@ Base.in(x, y, eos::EOS) = true
 function save_functional_eoses!()
     jldopen("$(config.datadir)/eos-functional.jld", "w") do file
         # phase boundaries
-        phaseregions = let 
+        phaseregions = let
             pb = PhaseBoundary
 
             I = map(phase -> pb(:I, phase), [:L, :III, :II])
@@ -451,12 +465,12 @@ function save_functional_eoses!()
             "mgsio3_pv" =>  BME(4.10e3, 247.0e9, 3.97, -0.016e-9),
             "fe_tfd" =>     TFD(26, 55.845),
             "h2o_tfd" =>    TFD([1, 8], [1.00794, 15.9994], [2., 1.]),
-            "mgsio3_tfd" => TFD([12, 14, 8], [24.305, 28.0855, 15.9994], 
+            "mgsio3_tfd" => TFD([12, 14, 8], [24.305, 28.0855, 15.9994],
                                 [1., 1., 3.]))
         write(file, "seager", sg)
 
         # Miscellaneous
-        misc = let            
+        misc = let
             # TFD in the ice X region
             iceXbound = phaseregions["X"]
             beyondXbound = BoundingBox(5e10, Inf, -Inf, Inf)
@@ -476,7 +490,7 @@ function save_functional_eoses!()
             iapws_hightemp = BoundedEOS(IAPWS(iapwscoeffs, ρrange2...), extent2)
             iapws_highprestemp = BoundedEOS(IAPWS(iapwscoeffs, ρrange3...), extent3)
 
-            # Vinet with thermal pressure for ice VII
+            # BME with thermal pressure for ice VII
             ρ₀ = 1464.7   # kg/m3
             K₀ = 23.9e9   # Pa
             T₀ = 300      # K
@@ -486,17 +500,17 @@ function save_functional_eoses!()
             q = -2        # dimensionless
             n = 3         # dimensionless
 
-            vinet = Vinet(ρ₀, K₀, dK₀)
-            mgd_vinet = MGDPressureEOS(vinet, T₀, θD₀, γ, q, n)
-            bounded_mgd_vinet = BoundedEOS(mgd_vinet, phaseregions["VII"])
-            
+            bme = BME(ρ₀, K₀, dK₀)
+            mgd_bme = MGDPressureEOS(bme, T₀, θD₀, γ₀, q, n)
+            bounded_mgd_bme = BoundedEOS(mgd_bme, phaseregions["VII"])
+
             Dict(
                 "tfd_iceX" => TFD_iceX,
                 "tfd_beyond" => TFD_beyond,
                 "iapws_hightemp" => iapws_hightemp,
                 "iapws_highpressure" => iapws_highpressure,
                 "iapws_highprestemp" => iapws_highprestemp,
-                "mgd_iceVII" => bounded_mgd_vinet)
+                "mgd_iceVII" => bounded_mgd_bme)
         end
         write(file, "misc", misc)
     end
