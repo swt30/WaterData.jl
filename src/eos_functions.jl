@@ -83,24 +83,23 @@ end
 Vinet(ρ₀, K₀, dK₀) = Vinet(ρ₀, K₀, dK₀, inversion_density_range...)
 
 "The Thomas-Fermi-Dirac EOS"
-immutable TFD{N<:Integer} <: FunctionalEOS
-    Z::Vector{N}
-    A::Vector
-    n::Vector
+immutable TFD <: FunctionalEOS
+    Z::Vector{Int}
+    A::Vector{Float64}
+    n::Vector{Float64}
 
-    function TFD(Z, A, n)
+    function TFD(Z::Vector{Int}, A::Vector{Float64}, n::Vector{Float64})
         @assert length(Z) == length(A) == length(n)
         new(Z, A, n)
     end
 end
 # default constructor
-function TFD{N<:Integer}(Z::Vector{N}, A::Vector,
-                         n::Vector=ones(length(Z)))
-    TFD{N}(Z, A, n)
+function TFD{T<:Real}(Z::Vector{Int}, A::Vector{T}, n=ones(length(Z)))
+    TFD(Z, Float64[A], n)
 end
 # put in arrays if necessary
 function TFD(Z::Integer, A)
-    TFD([Z], [A])
+    TFD(Int[Z], [A])
 end
 
 "The IAPWS EOS, functional formulation"
@@ -112,7 +111,7 @@ immutable IAPWS <: InverseFunctionalEOS
     α::Vector{Float64}
     β::Vector{Float64}
     γ::Vector{Float64}
-    ε::Vector{Float64}
+    ϵ::Vector{Float64}
     a::Vector{Float64}
     b::Vector{Float64}
     B::Vector{Float64}
@@ -189,9 +188,9 @@ function ϕr2(I::IAPWS, δ, τ, i)
 end
 function ϕr3(I::IAPWS, δ, τ, i)
     let nᵢ = I.n[i], dᵢ = I.d[i], tᵢ = I.t[i], cᵢ = I.c[i],
-        αᵢ = I.α[i], εᵢ = I.ε[i], βᵢ = I.β[i], γᵢ = I.γ[i]
+        αᵢ = I.α[i], ϵᵢ = I.ϵ[i], βᵢ = I.β[i], γᵢ = I.γ[i]
 
-        nᵢ * δ^dᵢ * τ^tᵢ * exp(-αᵢ*(δ-εᵢ)^2 - βᵢ*(τ-γᵢ)^2)
+        nᵢ * δ^dᵢ * τ^tᵢ * exp(-αᵢ*(δ-ϵᵢ)^2 - βᵢ*(τ-γᵢ)^2)
     end
 end
 function ϕr4(I::IAPWS, δ, τ, i)
@@ -256,6 +255,25 @@ function thermalpressure(mgd::MGDPressureEOS, ρ, T)
     end
 end
 
+const _tfd_g_coeffs = [0          0          0         0         0;
+                       0          0          0         0         0;
+                       1.512E-2   8.955E-2   1.090E-1  5.089     -5.980;
+                       2.181E-3   -4.015E-1  1.698     -9.566    9.873;
+                       -3.328E-4  5.167E-1   -2.369    1.349E1   -1.427E1;
+                       -1.384E-2  -6.520E-1  3.529     -2.095E1  2.264E1]
+
+"Helper function for TFD partial sum"
+function β_(n::Integer, ϵ::Vector{Float64})
+    n += 1 # adjust n from 2-5 to 3-6
+    let g = _tfd_g_coeffs
+        return 1./((g[n, 1]
+                  + g[n, 2] * (ϵ.^(1/2))
+                  + g[n, 3] * ϵ
+                  + g[n, 4] * (ϵ.^(3/2))
+                  + g[n, 5] * (ϵ.^2)).^(n-1))
+    end
+end
+
 
 # Evaluating the EOSes
 
@@ -304,35 +322,19 @@ function Base.call(eos::TFD, P::Real)
         # P is in Pa but we want it in dyn/cm^2: 1 Pa = 10 dyn/cm^2
         P *= 10
 
-        # constants
-        g = [0          0          0         0         0;
-             0          0          0         0         0;
-             1.512E-2   8.955E-2   1.090E-1  5.089     -5.980;
-             2.181E-3   -4.015E-1  1.698     -9.566    9.873;
-             -3.328E-4  5.167E-1   -2.369    1.349E1   -1.427E1;
-             -1.384E-2  -6.520E-1  3.529     -2.095E1  2.264E1]
-
         # pre-calculations
         ζ   = (P / 9.524E13)^(1/5) .* Z.^(-2/3)
-        ε   = (3 ./(32π^2 .* Z.^2)).^(1/3)
-        ϕ   = (3^(1/3))/20 + ε./(4 .*(3 .^(1/3)))
-        α   = 1./(1.941E-2 - ε.^(1/2).*6.277E-2 + ε.*1.076)
-        x₀0 = (8.884E-3 + (ε.^(1/2)).*4.998E-1
-                            + ε.*5.2604E-1).^(-1)
-        β₀  = x₀0.*ϕ - 1
-        β₁  = β₀.*α + ((1 + β₀)./ϕ)
-
-        function β_(n::Integer)
-            # sub-function for β remainder of components
-            n += 1 # adjust n from 2-5 to 3-6
-            bn = 1./((g[n, 1] + g[n, 2].*(ε.^(1/2)) + g[n, 3].*ε
-                      + g[n, 4].*(ε.^(3/2)) + g[n, 5].*(ε.^2)).^(n-1))
-        end
-
-        β₂ = β_(2)
-        β₃ = β_(3)
-        β₄ = β_(4)
-        β₅ = β_(5)
+        ϵ   = (3 ./(32π^2 .* Z.^2)).^(1/3)
+        ϕ   = (3^(1/3))/20 + ϵ./(4 .*(3 .^(1/3)))
+        α   = 1./(1.941E-2 - ϵ.^(1/2).*6.277E-2 + ϵ.*1.076)
+        x₀0 = (8.884E-3 + (ϵ.^(1/2)).*4.998E-1
+                            + ϵ.*5.2604E-1).^(-1)
+        β₀ = x₀0.*ϕ - 1
+        β₁ = β₀.*α + ((1 + β₀)./ϕ)
+        β₂ = β_(2, ϵ)
+        β₃ = β_(3, ϵ)
+        β₄ = β_(4, ϵ)
+        β₅ = β_(5, ϵ)
 
         βζ = β₀ + β₁.*ζ + β₂.*ζ.^2 + β₃.*ζ.^3 + β₄.*ζ.^4 + β₅.*ζ.^5
 
