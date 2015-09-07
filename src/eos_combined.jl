@@ -1,4 +1,3 @@
-# combined.jl
 # Defines equations of state which are combinations of others.
 
 using JLD, ProgressMeter
@@ -13,20 +12,27 @@ abstract PiecewiseEOS <: EOS
 
 """ Equation of state which is stored piecewise in the pressure coordinate
 
-    * `eoses`: Vector of `EOS`es. Any EOS can be chosen, though it's assumed
-    that you will build a `PressurePiecewiseEOS` from 1D EOSes.
-    * `edges`: Vector of pressure values that bracket each individual EOS. For example, the list [0, 1, 2] would serve to define
+    * `eoses`: Vector of `EOS`es. Any EOS can be chosen, though it's assumed you
+    will build a `PressurePiecewiseEOS` from 1D EOSes.
+    * `edges`: Vector of pressure values that bracket each individual EOS. For
+    example, the list [0, 1, 2] would serve to define an EOS with a domain
+    [0, 2], piecewise from [0, 1] and (1, 2].
 
     Calling the `PressurePiecewiseEOS` will evaluate the correct EOS for a given
     pressure. """
 immutable PressurePiecewiseEOS <: PiecewiseEOS
     eoses::Vector{EOS}     # any EOS can go in the middle
-    edges::Vector{Float64} # e.g.
+    edges::Vector{Float64}
 
     function PressurePiecewiseEOS(eoses, edges)
         @assert length(edges) == length(eoses) + 1
         new(eoses, edges)
     end
+end
+
+""" Equation of state representing an area outside the evaluation domain.
+    Returns NaN when called. """
+immutable OutOfDomainEOS <: EOS
 end
 
 "Find the appropriate individual EOS in a 1D piecewise `eos` at point `x`"
@@ -44,9 +50,11 @@ function get_single_eos(eos::PiecewiseEOS, x::Real)
     end
 end
 
-
 # calling a PressurePiecewiseEOS just evaluates the appropriate EOS
 Base.call(eos::PressurePiecewiseEOS, P::Real) = get_single_eos(eos, P)(P)
+# OutOfDomainEOS gives NaN when called
+Base.call(o::OutOfDomainEOS, P::Real) = NaN
+Base.call(o::OutOfDomainEOS, P::Real, T::Real) = NaN
 
 """ Save piecewise EOSes to `eos-functional.jld`:
 
@@ -75,7 +83,7 @@ end
 # Stitched (piecewise 2D) EOS
 
 "Equation of state which consists of several other EOS stitched together"
-type StitchedEOS <: EOS
+type StitchedEOS <: EOS  # TODO: should this be a subtype of PiecewiseEOS instead?
     eoses::Vector{EOS}
 end
 StitchedEOS(a::EOS, b...) = StitchedEOS([a, b...])
@@ -100,14 +108,7 @@ function get_single_eos(s::StitchedEOS, P, T)
     end
 end
 
-""" Equation of state representing an area outside the evaluation domain.
-    Returns NaN when called. """
-immutable OutOfDomainEOS <: EOS
-end
-
-
-Base.call(o::OutOfDomainEOS, P::Real) = NaN
-Base.call(o::OutOfDomainEOS, P::Real, T::Real) = NaN
+# calling a PressurePiecewiseEOS just evaluates the appropriate EOS
 Base.call(s::StitchedEOS, P, T) = get_single_eos(s, P, T)(P, T)
 
 

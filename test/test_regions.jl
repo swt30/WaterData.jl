@@ -133,8 +133,8 @@ facts("Regions and tessellations") do
 
         x1 = [0, 1, 2]
         x2 = [8, 9, 10]
-        @fact WaterData.lininterp(x1, λ1) --> between(0, 2)
-        @fact WaterData.lininterp(x2, λ2) --> between(8, 10)
+        @fact WaterData.lininterp(λ1, x1) --> between(0, 2)
+        @fact WaterData.lininterp(λ2, x2) --> between(8, 10)
     end
 
     context("Testing for points in a tessellation") do

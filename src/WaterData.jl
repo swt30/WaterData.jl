@@ -4,12 +4,9 @@ module WaterData
 include("config.jl")
 include("constants.jl")
 include("util.jl")
-include("eos.jl")
 include("regions.jl")
 include("phaseboundaries.jl")
-include("tables.jl")
-include("functions.jl")
-include("combined.jl")
+include("eos.jl")
 include("thermalexpansivity.jl")
 
 include("testhelpers.jl")

@@ -1,3 +1,5 @@
+# Functional equations of state
+
 using DataFrames  # for access to raw data tables
 using JLD         # for loading and saving
 using Roots       # for numerical inversion
@@ -17,7 +19,9 @@ const inversion_density_range = (1e-3, 1e7)
 
 # Functional EOS type hierarchy
 
+"An EOS which calculates ρ by evaluating a function ρ = ρ(P[, T])"
 abstract FunctionalEOS <: EOS
+"An EOS which calculates ρ by numerically inverting a function P = P(ρ[, T])"
 abstract InverseFunctionalEOS <: FunctionalEOS
 
 
@@ -124,16 +128,14 @@ function IAPWS(data::Matrix{Float64}, ρmin, ρmax)
 end
 
 
-# Wrapper for indicating a bounding box around a functional EOS
-
+"Wrapper for indicating that some `FunctionalEOS` is bounded"
 immutable BoundedEOS <: EOS
     eos::FunctionalEOS
     extent::Region
 end
 BoundingBox(b::BoundedEOS) = BoundingBox(b.extent)
 
-# Wrapper EOS for including thermal pressure
-
+"Wrapper for including thermal pressure with a BME or MGD EOS"
 immutable MGDPressureEOS <: InverseFunctionalEOS
     eos::Union(BME, Vinet)
     T₀::Float64
@@ -257,9 +259,7 @@ end
 
 # Evaluating the EOSes
 
-"Get the pressure of an EOS from a given density"
-function pressure end
-
+"Get the pressure for an EOS: P = pressure(ρ[, T])"
 function pressure(b::BME3, ρ)
     let ρ₀ = b.ρ₀, K₀ = b.K₀, dK₀ = b.dK₀
         η = ρ/ρ₀
@@ -285,6 +285,7 @@ function pressure(v::Vinet, ρ)
     end
 end
 
+"Get the base pressure (no thermal component) for an EOS with MGD thermal expansion"
 basepressure(mgd::MGDPressureEOS, ρ) = pressure(mgd.eos, ρ)
 pressure(mgd::MGDPressureEOS, ρ, T) = basepressure(mgd, ρ) + thermalpressure(mgd, ρ, T)
 
@@ -361,9 +362,11 @@ function Base.call(eos::InverseFunctionalEOS, P::Real, T::Real)
     fzero(ρ -> pressure(eos, ρ, T) - P, ρmin(eos), ρmax(eos))
 end
 
+"Minimum density of an EOS"
 ρmin(eos::EOS) = eos.ρmin
-ρmax(eos::EOS) = eos.ρmax
 ρmin(mgd::MGDPressureEOS) = ρmin(mgd.eos)
+"Maximum density of an EOS"
+ρmax(eos::EOS) = eos.ρmax
 ρmax(mgd::MGDPressureEOS) = ρmax(mgd.eos)
 
 function Base.call(eos::PolytropicEOS, P::Real)

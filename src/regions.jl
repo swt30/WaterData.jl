@@ -1,4 +1,3 @@
-# regions.jl
 # Defining regions on the plane, testing for inclusion, tessellations, and interpolation
 
 using VoronoiDelaunay  # for tessellations
@@ -43,8 +42,7 @@ BoundingBox(p::Polygon) = p.boundingbox
 # Inclusion testing
 
 Base.in(xy, r::Region) = in(xy..., r)
-Base.in(xy, eos::EOS) = in(xy..., eos)
-Base.in(x, y, bb::BoundingBox) = (bb.xmin <= x <= bb.xmax) && (bb.ymin <= y <= bb.ymax)
+Base.in(x, y, bb::BoundingBox) = (bb.xmin ≤ x ≤ bb.xmax) && (bb.ymin ≤ y ≤ bb.ymax)
 function Base.in(x, y, p::Polygon)
     if !((x, y) in p.boundingbox)
         return false
@@ -55,7 +53,7 @@ function Base.in(x, y, p::Polygon)
     lastcx = p.x[end]
     lastcy = p.y[end]
     for (cx, cy) in corners(p)
-        if cy < y && lastcy >= y || lastcy < y && cy >= y
+        if cy < y && lastcy ≥ y || lastcy < y && cy ≥ y
             if (cx + (y - cy)/(lastcy - cy)*(lastcx - cx)) < x
                 inpoly = !inpoly
             end
@@ -137,5 +135,5 @@ function barycoords(tri, xn, yn)
     λ = [λ1, λ2, 1 - λ1 - λ2]
 end
 
-"Linear interpolation from vertex values `x` and barycentric coordinates `λ`"
-lininterp(x, λ) = λ⋅x
+"Linear interpolation from barycentric coordinates `λ` between vertex values `x`"
+lininterp(λ, x) = λ⋅x

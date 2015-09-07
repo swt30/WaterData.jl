@@ -1,4 +1,3 @@
-# config.jl
 # Contains the configuration module, holding global settings
 
 

@@ -1,4 +1,3 @@
-# util.jl
 # Utility functions used throughout the package
 
 using Iterators: partition

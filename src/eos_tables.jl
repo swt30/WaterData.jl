@@ -1,4 +1,3 @@
-# eos-tables.jl
 # Tabular equations of state
 
 using DataFrames, JLD, VoronoiDelaunay, Dierckx
@@ -169,7 +168,7 @@ function lininterp(tri, eos, xn, yn)
     vertices = getvertices(tri)
     ρ = map(v -> ρ_atvertex(v, eos), vertices)
     λ = barycoords(tri, xn, yn)
-    return lininterp(ρ, λ)
+    return lininterp(λ, ρ)
 end
 
 "Linear interpolation of an equation of state `eos` at values `P` and `T`"

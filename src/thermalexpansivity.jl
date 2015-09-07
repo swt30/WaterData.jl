@@ -1,11 +1,9 @@
-# thermalexpansivity.jl
 # Calculate the thermal expansivity αᵥ of an EOS
 
 using Calculus: gradient
 
 
 "Gradient of the log of an EOS, ∇(ln(*ρ*(P, T))), at pressure `P` and temperature `T`"
-function gradientlog end
 function gradientlog(eos::EOS, P::Float64, T::Float64)
     gradient(PT -> log(eos(PT...)), [P, T])
 end

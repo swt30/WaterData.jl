@@ -1,4 +1,3 @@
-# phaseboundaries.jl
 # Calculate and use phase boundaries for water
 
 using Dierckx
@@ -82,13 +81,11 @@ immutable OtherPhaseBoundary <: PhaseBoundary
 end
 
 "Minimum pressure of the phase boundary (padded to avoid problems at P=0)"
-function Pmin end
 Pmin(pbp::PhaseBoundaryPars) = pbp.Pmin == 0 ? 1e-9 : pbp.Pmin
 Pmin(dpb::DunaevaPhaseBoundary) = Pmin(dpb.pars)
 Pmin(pb::OtherPhaseBoundary) = minimum(pb.P)
 
 "Maximum pressure of the phase boundary"
-function Pmax end
 Pmax(pbp::PhaseBoundaryPars) = pbp.Pmax == 0 ? 1e-9 : pbp.Pmin
 Pmax(dpb::DunaevaPhaseBoundary) = Pmax(dpb.pars)
 Pmax(pb::OtherPhaseBoundary) = maximum(pb.P)
@@ -109,7 +106,6 @@ function dunaevatemp(pars::PhaseBoundaryPars, P)
 end
 
 "Temperature along a phase boundary"
-function temperature end
 temperature(pb::PhaseBoundary) = pb.T
 temperature(pb::OtherPhaseBoundary, P) = pb.spline(P)
 temperature(pb::DunaevaPhaseBoundary, P) = dunaevatemp(pb.pars, P)
