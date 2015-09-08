@@ -14,7 +14,9 @@ export ChoukrounGrasset, PolytropicEOS,
 # Shared variables
 
 "Range of ρ (in kg/m^3) to consider when doing numerical inversion of ρ(P)"
-const inversion_density_range = (1e-3, 1e7)
+const inversion_density_range = (1e-3, 1e20)
+# it needs to be really large since the root finding algorithm can cause ρ
+# to vary quite a lot while it's solving
 
 
 # Functional EOS type hierarchy
@@ -244,7 +246,7 @@ function thermalpressure(mgd::MGDPressureEOS, ρ, T)
         θD₀ = mgd.θD₀,
         ρ₀ = mgd.eos.ρ₀,
         q = mgd.q,
-        M = 0.01801528, # kg/mol
+        M = h2o_molar_mass,
         n = mgd.n,
         T₀ = mgd.T₀
 
