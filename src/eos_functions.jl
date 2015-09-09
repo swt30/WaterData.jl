@@ -13,10 +13,10 @@ export ChoukrounGrasset, PolytropicEOS,
 
 # Shared variables
 
-"Range of ρ (in kg/m^3) to consider when doing numerical inversion of ρ(P)"
-const inversion_density_range = (1e-3, 1e20)
-# it needs to be really large since the root finding algorithm can cause ρ
-# to vary quite a lot while it's solving
+"Default range of ρ (in kg/m^3) to consider when doing numerical inversion of ρ(P)"
+const inversion_ρ_range = [1e-3, 1e7]
+"Default guess for the value of ρ when doing numerical inversion"
+const inversion_ρ_guess = 5e3
 
 
 # Functional EOS type hierarchy
@@ -42,6 +42,10 @@ function ChoukrounGrasset(Pref, Tref, V₀, aT₁, aT₂, aT₃, aT₄, P₀, aP
     ChoukrounGrasset(Pref, Tref, V₀, [aT₁, aT₂, aT₃, aT₄], P₀, [aP₁, aP₂, aP₃, aP₄])
 end
 
+function get_choukroungrasset_pars(phase)
+    readtable("$(config.rawdata)/ChoukrounGrasset-parameters.dat")[phase]
+end
+
 "The polytropic EOS, ρ(P) = P₀ + aP^2"
 immutable PolytropicEOS <: FunctionalEOS
     ρ₀::Float64
@@ -60,7 +64,7 @@ immutable BME3 <: BME
     ρmin::Float64
     ρmax::Float64
 end
-BME3(ρ₀, K₀, dK₀) = BME3(ρ₀, K₀, dK₀, inversion_density_range...)
+BME3(ρ₀, K₀, dK₀) = BME3(ρ₀, K₀, dK₀, inversion_ρ_range...)
 BME(ρ₀, K₀, dK₀) = BME3(ρ₀, K₀, dK₀)
 
 "Fourth-order Birch-Murnaghan EOS"
@@ -70,7 +74,7 @@ immutable BME4 <: BME
     ρmin::Float64
     ρmax::Float64
 end
-BME4(b::BME3, d2K₀::Real) = BME4(b, d2K₀, inversion_density_range...)
+BME4(b::BME3, d2K₀::Real) = BME4(b, d2K₀, inversion_ρ_range...)
 BME4(ρ₀::Real, K₀::Real, dK₀::Real, d2K₀::Real) = BME4(BME3(ρ₀, K₀, dK₀), d2K₀)
 BME(ρ₀::Real, K₀::Real, dK₀::Real, d2K₀::Real) = BME4(ρ₀, K₀, dK₀, d2K₀)
 
@@ -82,7 +86,7 @@ immutable Vinet <: InverseFunctionalEOS
     ρmin::Float64
     ρmax::Float64
 end
-Vinet(ρ₀, K₀, dK₀) = Vinet(ρ₀, K₀, dK₀, inversion_density_range...)
+Vinet(ρ₀, K₀, dK₀) = Vinet(ρ₀, K₀, dK₀, inversion_ρ_range...)
 
 "The Thomas-Fermi-Dirac EOS"
 immutable TFD <: FunctionalEOS
@@ -281,16 +285,14 @@ end
 
 "Get the pressure for an EOS: P = pressure(ρ[, T])"
 function pressure(b::BME3, ρ)
-    let ρ₀ = b.ρ₀, K₀ = b.K₀, dK₀ = b.dK₀
-        η = ρ/ρ₀
+    let ρ₀ = b.ρ₀, K₀ = b.K₀, dK₀ = b.dK₀, η = ρ/ρ₀
         return  (3/2*K₀*(η^(7/3) - η^(5/3))
                  * (1 + 3/4*(dK₀ - 4)*(η^(2/3) - 1)))
     end
 end
 
 function pressure(b::BME4, ρ)
-    let ρ₀ = b.bme3.ρ₀, K₀ = b.bme3.K₀, dK₀ = b.bme3.dK₀, d2K₀ = b.d2K₀,
-        η = ρ/ρ₀
+    let ρ₀ = b.bme3.ρ₀, K₀ = b.bme3.K₀, dK₀ = b.bme3.dK₀, d2K₀ = b.d2K₀, η = ρ/ρ₀
         return pressure(b) + (3/2*K₀*(η^(7/3) - η^(5/3))
                               * 3/8*(η^(2/3) - 1)^2
                               * (K₀*d2K₀ + dK₀*(dK₀ - 7) + 143/9))
@@ -298,8 +300,7 @@ function pressure(b::BME4, ρ)
 end
 
 function pressure(v::Vinet, ρ)
-    let ρ₀ = v.ρ₀, K₀ = v.K₀, dK₀ = v.dK₀
-        η = ρ/ρ₀
+    let ρ₀ = v.ρ₀, K₀ = v.K₀, dK₀ = v.dK₀, η = ρ/ρ₀
         return (3K₀*η^(2/3) * (1 - η^(-1/3))
                 * exp(3/2*(dK₀ - 1)*(1 - η^(-1/3))))
     end
@@ -359,11 +360,11 @@ function Base.call(cg::ChoukrounGrasset, P::Real, T::Real)
 end
 
 function Base.call(eos::InverseFunctionalEOS, P::Real)
-    fzero(ρ -> pressure(eos, ρ) - P, ρmin(eos), ρmax(eos))
+    fzero(ρ -> pressure(eos, ρ) - P, inversion_ρ_guess, [ρmin(eos), ρmax(eos)])
 end
 
 function Base.call(eos::InverseFunctionalEOS, P::Real, T::Real)
-    fzero(ρ -> pressure(eos, ρ, T) - P, ρmin(eos), ρmax(eos))
+    fzero(ρ -> pressure(eos, ρ, T) - P, inversion_ρ_guess, [ρmin(eos), ρmax(eos)])
 end
 
 "Minimum density of an EOS"
