@@ -1,6 +1,9 @@
 using FactCheck
 import WaterData
 
+include("$(WaterData.config.testdata)/function_testvalues.jl")
+resources = function_testvalues
+
 
 facts("Functional equations of state") do
     context("TFD") do
@@ -35,6 +38,72 @@ facts("Functional equations of state") do
                 test_TFD([207.2, 32.065], [82, 16], [12800, 17000, 29600])
             end
         end
+    end
+
+    context("Vinet") do
+        p = resources.vinetpars
+        vinet = WaterData.Vinet(p[:ρ₀], p[:K₀], p[:dK₀])
+        vinetsamples = resources.vinetdata
+        Ps = vinetsamples[:, 1]
+        ρs = vinetsamples[:, 2]
+
+        for (P, ρ) in zip(Ps, ρs)
+            @fact log(vinet(P)) --> roughly(log(ρ), rtol=0.01)
+        end
+    end
+
+    context("BME3") do
+        p = resources.bme3pars
+        bme3 = WaterData.BME3(p[:ρ₀], p[:K₀], p[:dK₀])
+        bme3samples = resources.bme3data
+        Ps = bme3samples[:, 1]
+        ρs = bme3samples[:, 2]
+
+        for (P, ρ) in zip(Ps, ρs)
+            @fact log(bme3(P)) --> roughly(log(ρ), rtol=0.01)
+        end
+    end
+
+    context("MGD thermal expansivity") do
+        p = resources.mgdpars
+        ice_density(molar_volume) = WaterData.h2o_molar_mass / molar_volume
+        ρ₀ = ice_density(p[:V₀])
+
+        for (T, datatable) in resources.mgddata
+            bme3 = WaterData.BME3(ρ₀, p[:K₀], p[:dK₀])
+            mgd = WaterData.MGDPressureEOS(bme3,
+                p[:T₀], p[:θD₀], p[:γ₀], p[:q], p[:n])
+            Ps = datatable[:, 1] * 1e9  # GPa -> Pa
+            Vs = datatable[:, 2] / 1e6  # cm3 /mol -> m3 /mol
+            ρs = map(ice_density, Vs)    # kg / m3
+
+            for (P, ρ) in zip(Ps, ρs)
+                @fact log(mgd(P, T)) --> roughly(log(ρ), rtol=0.01)
+            end
+        end
+    end
+
+    context("Choukroun-Grasset low-temperature ice") do
+        cgpars = WaterData
+        Ps = resources.cgdata[:, 1] * 1e6  # MPa -> Pa
+        Vs = resources.cgdata[:, 2] / 1e3  # cm3 /g -> m3 /kg
+        ρs = 1 ./ Vs              # kg / m3
+        Ts = resources.cgdata[:, 3]        # K
+
+        cgIp = WaterData.get_choukroungrasset_pars(:ice_I)
+        cgIIIp = WaterData.get_choukroungrasset_pars(:ice_III)
+        cgVp = WaterData.get_choukroungrasset_pars(:ice_V)
+        cgVIp = WaterData.get_choukroungrasset_pars(:ice_VI)
+
+        cgI = WaterData.ChoukrounGrasset(cgIp...)
+        cgIII = WaterData.ChoukrounGrasset(cgIIIp...)
+        cgV = WaterData.ChoukrounGrasset(cgVp...)
+        cgVI = WaterData.ChoukrounGrasset(cgVIp...)
+
+        @fact cgI(Ps[1], Ts[1]) --> roughly(ρs[1], rtol=0.01)
+        @fact map(cgIII, Ps[2:3], Ts[2:3]) --> roughly(ρs[2:3], rtol=0.01)
+        @fact map(cgV, Ps[4:5], Ts[4:5]) --> roughly(ρs[4:5], rtol=0.01)
+        @fact cgVI(Ps[6], Ts[6]) --> roughly(ρs[6], rtol=0.01)
     end
 
     context("EOS inversion") do

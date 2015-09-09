@@ -8,10 +8,12 @@ module config
     const datadir = normpath(joinpath(dirname(@__FILE__), "..", "data"))
     "The directory in which raw data are stored in text format"
     const rawdata = joinpath(datadir, "raw")
+    "The directory in which test data are stored"
+    const testdata = normpath(joinpath(dirname(@__FILE__), "..", "test", "data"))
 
     # Gridded EOS parameters
     "Grid resolution for making gridded equations of state"
-    const grid_resolution = 200
+    const grid_resolution = 256
     "Minimum pressure used in constructing the full EOS [Pa]"
     const Pmin = 10^(4.75)
     "Maximum pressure used in constructing the full EOS [Pa]"
