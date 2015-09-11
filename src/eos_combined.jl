@@ -36,7 +36,7 @@ immutable OutOfDomainEOS <: EOS
 end
 
 "Find the appropriate individual EOS in a 1D piecewise `eos` at point `x`"
-function get_single_eos(eos::PiecewiseEOS, x::Real)
+function get_single_eos(eos::PiecewiseEOS, x)
     # if outside the domain, take the edge point
     if x < first(eos.edges) || x > last(eos.edges)
         return OutOfDomainEOS()
@@ -51,10 +51,10 @@ function get_single_eos(eos::PiecewiseEOS, x::Real)
 end
 
 # calling a PressurePiecewiseEOS just evaluates the appropriate EOS
-Base.call(eos::PressurePiecewiseEOS, P::Real) = get_single_eos(eos, P)(P)
+Base.call(eos::PressurePiecewiseEOS, P) = get_single_eos(eos, P)(P)
 # OutOfDomainEOS gives NaN when called
-Base.call(o::OutOfDomainEOS, P::Real) = NaN
-Base.call(o::OutOfDomainEOS, P::Real, T::Real) = NaN
+Base.call(o::OutOfDomainEOS, P) = NaN
+Base.call(o::OutOfDomainEOS, P, T) = NaN
 
 """ Save piecewise EOSes to `eos-functional.jld`:
 
@@ -149,14 +149,16 @@ function save_full_eos!()
     Ps = logspace(log10(bb.xmin), log10(bb.xmax), Nx)
     Ts = logspace(log10(bb.ymin), log10(bb.ymax), Ny)
 
-    # compute ρ and α
+    # compute ρ
     ρs = zeros(Nx, Ny)
-    αs = zeros(Nx, Ny)
     meter = Progress(Nx*Ny, "Calculating ρ...")
     for (i, P) in enumerate(Ps), (j, T) in enumerate(Ts)
         ρs[i, j] = eos(P, T)
         next!(meter)
     end
+
+    # compute α
+    αs = zeros(Nx, Ny)
     meter = Progress(Nx*Ny, "Calculating α...")
     for (i, P) in enumerate(Ps), (j, T) in enumerate(Ts)
         αs[i, j] = thermalexpansivity(eos, P, T)

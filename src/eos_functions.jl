@@ -3,7 +3,7 @@
 using DataFrames  # for access to raw data tables
 using JLD         # for loading and saving
 using Roots       # for numerical inversion
-using Calculus: derivative
+import ForwardDiff
 
 export ChoukrounGrasset, PolytropicEOS,
     BME, BME3, BME4, Vinet, TFD,
@@ -14,9 +14,7 @@ export ChoukrounGrasset, PolytropicEOS,
 # Shared variables
 
 "Default range of ρ (in kg/m^3) to consider when doing numerical inversion of ρ(P)"
-const inversion_ρ_range = [1e-3, 1e7]
-"Default guess for the value of ρ when doing numerical inversion"
-const inversion_ρ_guess = 5e3
+const inversion_ρ_range = [1e-3, 1e8]
 
 
 # Functional EOS type hierarchy
@@ -74,9 +72,9 @@ immutable BME4 <: BME
     ρmin::Float64
     ρmax::Float64
 end
-BME4(b::BME3, d2K₀::Real) = BME4(b, d2K₀, inversion_ρ_range...)
-BME4(ρ₀::Real, K₀::Real, dK₀::Real, d2K₀::Real) = BME4(BME3(ρ₀, K₀, dK₀), d2K₀)
-BME(ρ₀::Real, K₀::Real, dK₀::Real, d2K₀::Real) = BME4(ρ₀, K₀, dK₀, d2K₀)
+BME4(b::BME3, d2K₀) = BME4(b, d2K₀, inversion_ρ_range...)
+BME4(ρ₀, K₀, dK₀, d2K₀) = BME4(BME3(ρ₀, K₀, dK₀), d2K₀)
+BME(ρ₀, K₀, dK₀, d2K₀) = BME4(ρ₀, K₀, dK₀, d2K₀)
 
 "The Vinet EOS"
 immutable Vinet <: InverseFunctionalEOS
@@ -134,8 +132,8 @@ end
 
 
 "Wrapper for indicating that some `FunctionalEOS` is bounded"
-immutable BoundedEOS <: EOS
-    eos::FunctionalEOS
+immutable BoundedEOS{F<:FunctionalEOS} <: EOS
+    eos::F
     extent::Region
 end
 BoundingBox(b::BoundedEOS) = BoundingBox(b.extent)
@@ -164,62 +162,127 @@ T_from_τ(τ) = Tc / τ
 τ_from_T(T) = Tc / T
 
 # supporting functions for Helmholtz energy
-function ψ(I::IAPWS, δ, τ, i)
-    let Cᵢ = I.C[i], Dᵢ = I.D[i]
-        exp(-Cᵢ*(δ-1)^2 - Dᵢ*(τ-1)^2)
-    end
-end
-function θ(I::IAPWS, δ, τ, i)
-    let Aᵢ = I.A[i], βᵢ = I.β[i]
-        (1-τ) + Aᵢ*((δ-1)^2)^(1/(2βᵢ))
-    end
-end
-function Δ(I::IAPWS, δ, τ, i)
-    let θᵢ = θ(I, δ, τ, i), Bᵢ = I.B[i], aᵢ = I.a[i]
-
-        θᵢ^2 + Bᵢ*((δ-1)^2)^aᵢ
-    end
-end
+# residual parts (not used in this code but kept here for testing purposes)
 function ϕr1(I::IAPWS, δ, τ, i)
-    let nᵢ = I.n[i], dᵢ = I.d[i], tᵢ = I.t[i]
+    let n = I.n[i], d = I.d[i], t = I.t[i]
 
-        nᵢ * δ^dᵢ * τ^tᵢ
+        n * δ^d * τ^t
     end
 end
 function ϕr2(I::IAPWS, δ, τ, i)
-    let nᵢ = I.n[i], dᵢ = I.d[i], tᵢ = I.t[i], cᵢ = I.c[i]
+    let n = I.n[i], d = I.d[i], t = I.t[i], c = I.c[i]
 
-        nᵢ * δ^dᵢ * τ^tᵢ * exp(-δ^cᵢ)
+        n * δ^d * τ^t * exp(-δ^c)
     end
 end
 function ϕr3(I::IAPWS, δ, τ, i)
-    let nᵢ = I.n[i], dᵢ = I.d[i], tᵢ = I.t[i], cᵢ = I.c[i],
-        αᵢ = I.α[i], ϵᵢ = I.ϵ[i], βᵢ = I.β[i], γᵢ = I.γ[i]
+    let n = I.n[i], d = I.d[i], t = I.t[i], c = I.c[i],
+        α = I.α[i], ϵ = I.ϵ[i], β = I.β[i], γ = I.γ[i]
 
-        nᵢ * δ^dᵢ * τ^tᵢ * exp(-αᵢ*(δ-ϵᵢ)^2 - βᵢ*(τ-γᵢ)^2)
+        n * δ^d * τ^t * exp(-α*(δ-ϵ)^2 - β*(τ-γ)^2)
     end
 end
 function ϕr4(I::IAPWS, δ, τ, i)
-    let nᵢ = I.n[i], Δᵢ = Δ(I, δ, τ, i), bᵢ = I.b[i], ψᵢ = ψ(I, δ, τ, i)
+    let n = I.n[i], Δ = Δ(I, δ, τ, i), b = I.b[i], ψ = ψ(I, δ, τ, i)
 
-        nᵢ * Δᵢ^bᵢ * δ * ψᵢ
+        n * Δ^b * δ * ψ
     end
 end
 
-"Residual part of the IAPWS Helmholtz energy"
+# helper functions for residual parts
+function ψ(I::IAPWS, δ, τ, i)
+    let C = I.C[i], D = I.D[i]
+        exp(-C*(δ-1)^2 - D*(τ-1)^2)
+    end
+end
+function θ(I::IAPWS, δ, τ, i)
+    let A = I.A[i], β = I.β[i]
+        (1-τ) + A*((δ-1)^2)^(1/2β)
+    end
+end
+function Δ(I::IAPWS, δ, τ, i)
+    let θ = θ(I, δ, τ, i), B = I.B[i], a = I.a[i]
+
+        θ^2 + B*((δ-1)^2)^a
+    end
+end
+
+# derivatives of residual parts
+function dϕr1(I::IAPWS, δ, τ, i)
+    let n = I.n[i], d = I.d[i], t = I.t[i]
+
+        n * d * δ^(d-1) * τ^t
+    end
+end
+function dϕr2(I::IAPWS, δ, τ, i)
+    let n = I.n[i], d = I.d[i], t = I.t[i], c = I.c[i]
+
+        n * exp(-δ^c) * (δ^(d-1) * τ^t * (d - c*δ^c))
+    end
+end
+function dϕr3(I::IAPWS, δ, τ, i)
+    let n = I.n[i], d = I.d[i], t = I.t[i], c = I.c[i],
+        α = I.α[i], ϵ = I.ϵ[i], β = I.β[i], γ = I.γ[i]
+
+        (n * δ^d * τ^t * exp(-α*(δ-ϵ)^2 - β*(τ-γ)^2)
+            * (d/δ - 2α*(δ - ϵ)))
+    end
+end
+function dϕr4(I::IAPWS, δ, τ, i)
+    let n = I.n[i], Δ = Δ(I, δ, τ, i), b = I.b[i], ψ = ψ(I, δ, τ, i),
+        dψdδ = dψdδ(I, δ, τ, i), dΔbdδ = dΔbdδ(I, δ, τ, i)
+
+        n * (Δ^b * (ψ + δ*dψdδ) + dΔbdδ * δ * ψ)
+    end
+end
+
+# derivatives of helper functions
+function dψdδ(I::IAPWS, δ, τ, i)
+    let C = I.C[i], ψ = ψ(I, δ, τ, i)
+
+        -2C * (δ - 1) * ψ
+    end
+end
+function dΔbdδ(I::IAPWS, δ, τ, i)
+    let b = I.b[i], Δ = Δ(I, δ, τ, i), dΔdδ = dΔdδ(I, δ, τ, i)
+
+        b * Δ^(b - 1) * dΔdδ
+    end
+end
+function dΔdδ(I::IAPWS, δ, τ, i)
+    let A = I.A[i], θ = θ(I, δ, τ, i), β = I.β[i], a = I.a[i], B = I.B[i]
+
+        ((δ - 1) * (A * θ * 2/β * ((δ - 1)^2)^(1/2β - 1)
+                    + 2B * a * ((δ - 1)^2)^(a - 1)))
+    end
+end
+
+"IAPWS Helmholtz energy"
 function ϕr(I::IAPWS, δ, τ)
-    # we take sums over the functions ϕ1, ϕ2...
+    # we take sums over the functions dϕ1, dϕ2...
     part1 = mapreduce(i -> ϕr1(I, δ, τ, i), (+), 0, 1:7)
     part2 = mapreduce(i -> ϕr2(I, δ, τ, i), (+), 0, 8:51)
     part3 = mapreduce(i -> ϕr3(I, δ, τ, i), (+), 0, 52:54)
     part4 = mapreduce(i -> ϕr4(I, δ, τ, i), (+), 0, 55:56)
 
     # and then add them all together
-    return part1 + part2 + part3 + part4
+    (part1 + part2 + part3 + part4)
 end
 
 "Derivative of the IAPWS Helmholtz energy in the density direction"
-dϕrδ(I::IAPWS, δ, τ) = derivative(dδ::Float64 -> ϕr(I, δ + dδ, τ), 0.0)
+function dϕrδ(I::IAPWS, δ, τ)
+    # we take sums over the functions dϕ1, dϕ2...
+    part1 = mapreduce(i -> dϕr1(I, δ, τ, i), (+), 0, 1:7)
+    part2 = mapreduce(i -> dϕr2(I, δ, τ, i), (+), 0, 8:51)
+    part3 = mapreduce(i -> dϕr3(I, δ, τ, i), (+), 0, 52:54)
+    part4 = mapreduce(i -> dϕr4(I, δ, τ, i), (+), 0, 55:56)
+
+    # and then add them all together
+    (part1 + part2 + part3 + part4)
+end
+
+"Derivative of the IAPWS Helmholtz energy in the density direction"
+dϕrδ_old(I::IAPWS, δ, τ) = ForwardDiff.derivative(dδ -> ϕr(I, δ + dδ, τ), 0)
 
 "Pressure component of the Choukroun-Gras￼set ice EOS"
 function ξP(cg::ChoukrounGrasset, P)
@@ -320,7 +383,7 @@ end
 pressure(beos::BoundedEOS, ρ) = pressure(beos.eos, ρ)
 pressure(beos::BoundedEOS, ρ, T) = pressure(beos.eos, ρ, T)
 
-function Base.call(eos::TFD, P::Real)
+function Base.call(eos::TFD, P)
     let Z = eos.Z, A = eos.A, n = eos.n
         # P is in Pa but we want it in dyn/cm^2: 1 Pa = 10 dyn/cm^2
         P *= 10
@@ -352,19 +415,19 @@ function Base.call(eos::TFD, P::Real)
     end
 end
 
-Base.call(eos::TFD, P::Real, T::Real) = eos(P)
+Base.call(eos::TFD, P, T) = eos(P)
 
-function Base.call(cg::ChoukrounGrasset, P::Real, T::Real)
+function Base.call(cg::ChoukrounGrasset, P, T)
     P = P/1e6  # Pa -> MPa
     density = 1./specificvolume(cg, P, T)
 end
 
-function Base.call(eos::InverseFunctionalEOS, P::Real)
-    fzero(ρ -> pressure(eos, ρ) - P, inversion_ρ_guess, [ρmin(eos), ρmax(eos)])
+function Base.call(eos::InverseFunctionalEOS, P)
+    fzero(ρ -> pressure(eos, ρ) - P, ρmin(eos), ρmax(eos))
 end
 
-function Base.call(eos::InverseFunctionalEOS, P::Real, T::Real)
-    fzero(ρ -> pressure(eos, ρ, T) - P, inversion_ρ_guess, [ρmin(eos), ρmax(eos)])
+function Base.call(eos::InverseFunctionalEOS, P, T)
+    fzero(ρ -> pressure(eos, ρ, T) - P, ρmin(eos), ρmax(eos))
 end
 
 "Minimum density of an EOS"
@@ -374,15 +437,15 @@ end
 ρmax(eos::EOS) = eos.ρmax
 ρmax(mgd::MGDPressureEOS) = ρmax(mgd.eos)
 
-function Base.call(eos::PolytropicEOS, P::Real)
+function Base.call(eos::PolytropicEOS, P)
     let a = eos.a, ρ₀ = eos.ρ₀, n = eos.n
         return ρ₀ + a*P^n
     end
 end
 
-Base.call(eos::PolytropicEOS, P::Real, T::Real) = eos(P)
-Base.call(beos::BoundedEOS, P::Real) = beos.eos(P)
-Base.call(beos::BoundedEOS, P::Real, T::Real) = beos.eos(P, T)
+Base.call(eos::PolytropicEOS, P, T) = eos(P)
+Base.call(beos::BoundedEOS, P) = beos.eos(P)
+Base.call(beos::BoundedEOS, P, T) = beos.eos(P, T)
 
 
 # Defining the regions within which each function holds
@@ -489,11 +552,11 @@ function save_functional_eoses!()
             iapwstable = readdlm("$(config.rawdata)/IAPWS-coeffs.dat", ',', Float64, skipstart=1)
             iapwscoeffs = iapwstable[:, 2:end]
             extent1 = BoundingBox(1e9, 1e12, 273.16, Tc)
-            ρrange1 = (0, 1e6)
+            ρrange1 = (1e-6, 1e6)
             extent2 = BoundingBox(0.05e6, 1e9, 1273., 25000.)
-            ρrange2 = (0, 1e3)
+            ρrange2 = (1e-6, 1e3)
             extent3 = BoundingBox(1e9, 1e12, Tc, 25000)
-            ρrange3 = (0, 1e5)
+            ρrange3 = (1e-6, 1e5)
             iapws_highpressure = BoundedEOS(IAPWS(iapwscoeffs, ρrange1...), extent1)
             iapws_hightemp = BoundedEOS(IAPWS(iapwscoeffs, ρrange2...), extent2)
             iapws_highprestemp = BoundedEOS(IAPWS(iapwscoeffs, ρrange3...), extent3)
