@@ -176,8 +176,8 @@ function ϕr2(I::IAPWS, δ, τ, i)
     end
 end
 function ϕr3(I::IAPWS, δ, τ, i)
-    let n = I.n[i], d = I.d[i], t = I.t[i], c = I.c[i],
-        α = I.α[i], ϵ = I.ϵ[i], β = I.β[i], γ = I.γ[i]
+    let n = I.n[i], d = I.d[i], t = I.t[i], α = I.α[i],
+        ϵ = I.ϵ[i], β = I.β[i], γ = I.γ[i]
 
         n * δ^d * τ^t * exp(-α*(δ-ϵ)^2 - β*(τ-γ)^2)
     end
@@ -221,8 +221,8 @@ function dϕr2(I::IAPWS, δ, τ, i)
     end
 end
 function dϕr3(I::IAPWS, δ, τ, i)
-    let n = I.n[i], d = I.d[i], t = I.t[i], c = I.c[i],
-        α = I.α[i], ϵ = I.ϵ[i], β = I.β[i], γ = I.γ[i]
+    let n = I.n[i], d = I.d[i], t = I.t[i], α = I.α[i],
+        ϵ = I.ϵ[i], β = I.β[i], γ = I.γ[i]
 
         (n * δ^d * τ^t * exp(-α*(δ-ϵ)^2 - β*(τ-γ)^2)
             * (d/δ - 2α*(δ - ϵ)))

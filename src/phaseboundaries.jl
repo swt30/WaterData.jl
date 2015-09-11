@@ -16,7 +16,7 @@ const phase_mappings = let
     phasemap = Dict(zip(keys, shortkeys))
     shortmap = Dict(zip(shortkeys, shortkeys))
 
-    phase_mappings = merge!(phasemap, shortmap)
+    merge!(phasemap, shortmap)
 end
 
 "Read in phase boundary parameter table from Dunaeva et al"
@@ -93,10 +93,10 @@ Pmax(pb::OtherPhaseBoundary) = maximum(pb.P)
 "Pressure along a phase boundary"
 pressure(pb::PhaseBoundary) = pb.P
 
-Base.getindex(pb::PhaseBoundary, i) = [pb.P[i], pb.T[i]]
+getpoint(pb::PhaseBoundary, i) = [pb.P[i], pb.T[i]]
 Base.length(pb::PhaseBoundary) = length(pb.P)
 Base.start(pb::PhaseBoundary) = 1
-Base.next(pb::PhaseBoundary, i) = pb[i], i+1
+Base.next(pb::PhaseBoundary, i) = getpoint(pb, i), i+1
 Base.done(pb::PhaseBoundary, i) = i > length(pb)
 
 "Calculate a temperature at a given pressure `P` using Dunaeva parameters `pars`"

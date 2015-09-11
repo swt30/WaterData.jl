@@ -27,11 +27,8 @@ immutable Polygon <: Region
 
     # we precalculate the bounding box since we'll be using it a lot
     function Polygon(x, y)
-        if length(x) == length(y)
-            new(x, y, BoundingBox(extrema(x)..., extrema(y)...))
-        else
-            error("Uneven number of x and y points")
-        end
+        @assert (length(x) == length(y)) "Uneven number of x and y points"
+        new(x, y, BoundingBox(extrema(x)..., extrema(y)...))
     end
 end
 "Get the corners of a `Polygon`"

@@ -13,7 +13,7 @@ module config
 
     # Gridded EOS parameters
     "Grid resolution for making gridded equations of state"
-    const grid_resolution = 100
+    const grid_resolution = 256
     "Minimum pressure used in constructing the full EOS [Pa]"
     const Pmin = 10^(4.75)
     "Maximum pressure used in constructing the full EOS [Pa]"

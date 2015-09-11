@@ -90,7 +90,7 @@ StitchedEOS(a::EOS, b...) = StitchedEOS([a, b...])
 
 "Bounding box for this EOS"
 function BoundingBox(s::StitchedEOS)
-    bboxes = [BoundingBox(e) for e in s.eoses]
+    bboxes = [BoundingBox(eos) for eos in s.eoses]
     xmin = minimum([bb.xmin for bb in bboxes])
     xmax = maximum([bb.xmax for bb in bboxes])
     ymin = minimum([bb.ymin for bb in bboxes])
