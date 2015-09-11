@@ -1,6 +1,6 @@
 # Defining regions on the plane, testing for inclusion, tessellations, and interpolation
 
-using VoronoiDelaunay  # for tessellations
+using VoronoiDelaunay
 
 
 # Region types

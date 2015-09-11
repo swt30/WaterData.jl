@@ -1,9 +1,19 @@
+# Needs features only available in julia 0.4
 julia 0.4-
-VoronoiDelaunay
-Dierckx
+
+# Data handling and wrangling
 JLD
-Roots
-ProgressMeter
-Calculus
 DataFrames
 Iterators
+
+# Interpolation and tessellation
+VoronoiDelaunay
+Dierckx
+
+# Derivatives, gradients, numeric root-finding
+ForwardDiff  # automatic differentiation, preferred but not always suitable
+Calculus     # finite differencing, for when ForwardDiff isn't available
+Roots
+
+# So we have something to look at during long operations
+ProgressMeter

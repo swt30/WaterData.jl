@@ -1,7 +1,7 @@
 # Calculate the thermal expansivity αᵥ of an EOS
 
-import ForwardDiff
-import Calculus
+import ForwardDiff, Calculus
+
 
 "Gradient of the log of an EOS, ∇(ln(*ρ*(P, T))), at pressure `P` and temperature `T`"
 function gradientlog(eos::EOS, P, T)
