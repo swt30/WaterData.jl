@@ -1,5 +1,7 @@
 # Main module file
 
+__precompile__()
+
 "Thermophysical properties of water"
 module WaterData
 
