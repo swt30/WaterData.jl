@@ -1,9 +1,6 @@
 # Functional equations of state
 
-using DataFrames  # for access to raw data tables
-using JLD         # for loading and saving
-using Roots       # for numerical inversion
-import ForwardDiff
+using DataFrames, JLD, Roots
 
 export ChoukrounGrasset, PolytropicEOS,
     BME, BME3, BME4, Vinet, TFD,
@@ -280,9 +277,6 @@ function dϕrδ(I::IAPWS, δ, τ)
     # and then add them all together
     (part1 + part2 + part3 + part4)
 end
-
-"Derivative of the IAPWS Helmholtz energy in the density direction"
-dϕrδ_old(I::IAPWS, δ, τ) = ForwardDiff.derivative(dδ -> ϕr(I, δ + dδ, τ), 0)
 
 "Pressure component of the Choukroun-Gras￼set ice EOS"
 function ξP(cg::ChoukrounGrasset, P)

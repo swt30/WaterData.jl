@@ -1,6 +1,6 @@
 # Utility functions used throughout the package
 
-import Iterators: partition
+using Iterators: partition
 
 
 # Duplicate-finding

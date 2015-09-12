@@ -31,4 +31,11 @@ facts("Thermal expansivity") do
         @fact WaterData.gradientlog(e2, 1., 1.) --> roughly([2/1, 3/1])
         @fact WaterData.gradientlog(e2, 4., 2.) --> roughly([2/4, 3/2])
     end
+
+    context("Get directional derivative of an EOS") do
+        @fact WaterData.partiallnT(e1, 1., 1.) --> roughly(1/1)
+        @fact WaterData.partiallnT(e1, 4., 1.) --> roughly(1/1)
+        @fact WaterData.partiallnT(e2, 1., 1.) --> roughly(3/1)
+        @fact WaterData.partiallnT(e2, 4., 2.) --> roughly(3/2)
+    end
 end

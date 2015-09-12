@@ -11,8 +11,7 @@ VoronoiDelaunay
 Dierckx
 
 # Derivatives, gradients, numeric root-finding
-ForwardDiff  # automatic differentiation, preferred but not always suitable
-Calculus     # finite differencing, for when ForwardDiff isn't available
+Calculus
 Roots
 
 # So we have something to look at during long operations
