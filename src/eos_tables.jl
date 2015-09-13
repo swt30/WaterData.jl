@@ -195,7 +195,7 @@ function grid(eos::UnstructuredEOS, resolution=config.grid_resolution)
 end
 
 """ Take a slice of a `GridEOS` at a given temperature, turning it into
-    a `LineEOS`. """
+    an isothermal `LineEOS`. """
 function slice(eos::GridEOS, T)
     Ps = eos.P
     ρs = map(P -> eos(P, T), Ps)
