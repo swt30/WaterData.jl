@@ -1,5 +1,7 @@
 # Equation of state types
 
+export EOS
+
 
 # EOS type
 

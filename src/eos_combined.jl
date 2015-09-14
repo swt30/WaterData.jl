@@ -36,7 +36,7 @@ immutable OutOfDomainEOS <: EOS
 end
 
 "Find the appropriate individual EOS in a 1D piecewise `eos` at point `x`"
-function get_single_eos(eos::PiecewiseEOS, x::Number)
+function get_single_eos(eos::PiecewiseEOS, x)
     # if outside the domain, take the edge point
     if x < first(eos.edges) || x > last(eos.edges)
         return OutOfDomainEOS()
@@ -51,10 +51,10 @@ function get_single_eos(eos::PiecewiseEOS, x::Number)
 end
 
 # calling a PressurePiecewiseEOS just evaluates the appropriate EOS
-Base.call(eos::PressurePiecewiseEOS, P::Number) = get_single_eos(eos, P)(P)
+Base.call(eos::PressurePiecewiseEOS, P) = get_single_eos(eos, P)(P)
 # OutOfDomainEOS gives NaN when called
-Base.call(o::OutOfDomainEOS, P::Number) = NaN
-Base.call(o::OutOfDomainEOS, P::Number, T::Number) = NaN
+Base.call(o::OutOfDomainEOS, P) = NaN
+Base.call(o::OutOfDomainEOS, P, T) = NaN
 
 """ Save piecewise EOSes to `eos-functional.jld`:
 
@@ -99,7 +99,7 @@ function BoundingBox(s::StitchedEOS)
 end
 
 "Find the appropriate individual EOS in a 2D piecewise `eos` at point (`P`,`T`)"
-function get_single_eos(s::StitchedEOS, P::Number, T::Number)
+function get_single_eos(s::StitchedEOS, P, T)
     i = findfirst(e -> (P, T) in e, s.eoses)
     if i == 0
         OutOfDomainEOS()
@@ -109,7 +109,7 @@ function get_single_eos(s::StitchedEOS, P::Number, T::Number)
 end
 
 # calling a PressurePiecewiseEOS just evaluates the appropriate EOS
-Base.call(s::StitchedEOS, P::Number, T::Number) = get_single_eos(s, P, T)(P, T)
+Base.call(s::StitchedEOS, P, T) = get_single_eos(s, P, T)(P, T)
 
 
 # Full EOS
