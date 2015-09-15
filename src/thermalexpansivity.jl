@@ -10,7 +10,7 @@ function partiallnT(eos::EOS, P, T)
 end
 function partiallnT(s::StitchedEOS, P, T)
     i = findfirst(eos -> (P, T) in eos, s.eoses)
-    i == 0 ? NaN : partiallogy(s.eoses[i], P, T)
+    i == 0 ? NaN : partiallnT(s.eoses[i], P, T)
 end
 
 "Gradient ∇(ln ρ)"
