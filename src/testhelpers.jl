@@ -5,7 +5,6 @@
 module testhelpers
 
 using FactCheck
-import WaterData
 
 "Closure to check if something is between `a` and `b`"
 function between(a, b)
