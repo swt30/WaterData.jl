@@ -2,7 +2,7 @@ using FactCheck
 import WaterData
 
 include("$(WaterData.config.testdata)/function_testvalues.jl")
-resources = function_testvalues
+res = function_testvalues
 
 
 facts("Functional equations of state") do
@@ -41,9 +41,9 @@ facts("Functional equations of state") do
     end
 
     context("Vinet") do
-        p = resources.vinetpars
+        p = res.vinetpars
         vinet = WaterData.Vinet(p[:ρ₀], p[:K₀], p[:dK₀])
-        vinetsamples = resources.vinetdata
+        vinetsamples = res.vinetdata
         Ps = vinetsamples[:, 1]
         ρs = vinetsamples[:, 2]
 
@@ -53,9 +53,9 @@ facts("Functional equations of state") do
     end
 
     context("BME3") do
-        p = resources.bme3pars
+        p = res.bme3pars
         bme3 = WaterData.BME3(p[:ρ₀], p[:K₀], p[:dK₀])
-        bme3samples = resources.bme3data
+        bme3samples = res.bme3data
         Ps = bme3samples[:, 1]
         ρs = bme3samples[:, 2]
 
@@ -65,11 +65,11 @@ facts("Functional equations of state") do
     end
 
     context("MGD thermal expansivity") do
-        p = resources.mgdpars
+        p = res.mgdpars
         ice_density(molar_volume) = WaterData.h2o_molar_mass / molar_volume
         ρ₀ = ice_density(p[:V₀])
 
-        for (T, datatable) in resources.mgddata
+        for (T, datatable) in res.mgddata
             bme3 = WaterData.BME3(ρ₀, p[:K₀], p[:dK₀])
             mgd = WaterData.MGDPressureEOS(bme3,
                 p[:T₀], p[:θD₀], p[:γ₀], p[:q], p[:n])
@@ -85,10 +85,10 @@ facts("Functional equations of state") do
 
     context("Choukroun-Grasset low-temperature ice") do
         cgpars = WaterData
-        Ps = resources.cgdata[:, 1] * 1e6  # MPa -> Pa
-        Vs = resources.cgdata[:, 2] / 1e3  # cm3 /g -> m3 /kg
+        Ps = res.cgdata[:, 1] * 1e6  # MPa -> Pa
+        Vs = res.cgdata[:, 2] / 1e3  # cm3 /g -> m3 /kg
         ρs = 1 ./ Vs              # kg / m3
-        Ts = resources.cgdata[:, 3]        # K
+        Ts = res.cgdata[:, 3]        # K
 
         cgIp = WaterData.get_choukroungrasset_pars(:ice_I)
         cgIIIp = WaterData.get_choukroungrasset_pars(:ice_III)

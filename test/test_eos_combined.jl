@@ -5,7 +5,7 @@ import WaterData
 # preliminary type definitions
 
 "type definitions for testing piecewise EOS"
-module test_combined_resources
+module test_eos_combined_resources
 import WaterData
 
 "1D test EOS"
@@ -23,13 +23,12 @@ Base.call(e::TestEOS2D, P::Real, T::Real) = (P+T)^(e.power) + (e.add)
 
 end # module resources
 
-import test_combined_resources
-res = test_combined_resources
-
 
 # tests
 
 facts("Combined EOS") do
+    res = test_eos_combined_resources
+    
     context("1D piecewise EOS") do
         # three different versions
         identity = res.TestEOS1D(1)

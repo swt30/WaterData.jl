@@ -38,7 +38,7 @@ immutable PhaseBoundaryPars
     d::Float64
     e::Float64
 end
-function PhaseBoundaryPars(phase1::String, phase2::String)
+function PhaseBoundaryPars(phase1::AbstractString, phase2::AbstractString)
     # Read a phase boundary from file
     # TODO: re-document this constructor once permitted
     table = read_phase_boundary_table()
@@ -111,7 +111,7 @@ temperature(pb::OtherPhaseBoundary, P) = pb.spline(P)
 temperature(pb::DunaevaPhaseBoundary, P) = dunaevatemp(pb.pars, P)
 
 # Construct a phase boundary between phases `phase1` and `phase2`
-function PhaseBoundary(phase1::String, phase2::String)
+function PhaseBoundary(phase1::AbstractString, phase2::AbstractString)
     pars = PhaseBoundaryPars(phase1, phase2)
     P = collect(linspace(pars.Pmin, pars.Pmax))
     T = map(T -> dunaevatemp(pars, T), P)
@@ -123,11 +123,11 @@ function PhaseBoundary(phase1::Symbol, phase2::Symbol)
     p2 = phase_mappings[string(phase2)]
     PhaseBoundary(p1, p2)
 end
-function PhaseBoundary(phase1::Symbol, phase2::String)
+function PhaseBoundary(phase1::Symbol, phase2::AbstractString)
     p1 = phase_mappings[string(phase1)]
     PhaseBoundary(p1, phase2)
 end
-function PhaseBoundary(phase1::String, phase2::Symbol)
+function PhaseBoundary(phase1::AbstractString, phase2::Symbol)
     p2 = phase_mappings[string(phase2)]
     PhaseBoundary(phase1, p2)
 end
