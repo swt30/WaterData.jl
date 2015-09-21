@@ -53,6 +53,26 @@ const bme3data = [
     9.69158e+12   15390.7;
 ]
 
+const bme4pars = Dict(
+    :ρ₀ => 4100.,
+    :K₀ => 247e9,
+    :dK₀ => 3.97,
+    :d2K₀ => -0.016e-9
+)
+
+const bme4data = [
+    # P           rho
+    1e+07         4271.43;
+    2.6777e+08    4133.51;
+    4.66182e+09   4120.99;
+    2.82114e+10   4491.47;
+    1.91993e+11   6010.25;
+    1.35877e+12   10169.3;
+    6.25222e+12   17726.5;
+    2.66029e+13   34749.6;
+    # unfortunately the BME doesn't appear to work properly beyond this point
+]
+
 const cgdata = [
     # P      V         T
     208.902  1.05615   251.15;
@@ -69,7 +89,7 @@ const mgdpars = Dict(
     :dK₀ => 4.2,
     :α₀ => 150e-5,
     :T₀ => 300.,      # K
-    :γ₀ => 1.2,       
+    :γ₀ => 1.2,
     :θD₀ => 1470.,    # K
     :q => -2,
     :n => 3,

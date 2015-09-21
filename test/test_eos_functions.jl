@@ -64,6 +64,19 @@ facts("Functional equations of state") do
         end
     end
 
+    context("BME4") do
+        inv_range = [4000., 60000.]
+        p = res.bme4pars
+        bme4 = WaterData.BME4(p[:ρ₀], p[:K₀], p[:dK₀], p[:d2K₀], inv_range...)
+        bme4samples = res.bme4data
+        Ps = bme4samples[:, 1]
+        ρs = bme4samples[:, 2]
+
+        for (P, ρ) in zip(Ps, ρs)
+            @fact log(bme4(P)) --> roughly(log(ρ), rtol=0.01)
+        end
+    end
+
     context("MGD thermal expansivity") do
         p = res.mgdpars
         ice_density(molar_volume) = WaterData.h2o_molar_mass / molar_volume

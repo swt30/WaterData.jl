@@ -64,13 +64,14 @@ BME(ρ₀, K₀, dK₀) = BME3(ρ₀, K₀, dK₀)
 
 "Fourth-order Birch-Murnaghan EOS"
 immutable BME4 <: BME
-    bme3::BME3
+    ρ₀::Float64
+    K₀::Float64
+    dK₀::Float64
     d2K₀::Float64
     ρmin::Float64
     ρmax::Float64
 end
-BME4(b::BME3, d2K₀) = BME4(b, d2K₀, inversion_ρ_range...)
-BME4(ρ₀, K₀, dK₀, d2K₀) = BME4(BME3(ρ₀, K₀, dK₀), d2K₀)
+BME4(ρ₀, K₀, dK₀, d2K₀) = BME4(ρ₀, K₀, dK₀, d2K₀, inversion_ρ_range...)
 BME(ρ₀, K₀, dK₀, d2K₀) = BME4(ρ₀, K₀, dK₀, d2K₀)
 
 "The Vinet EOS"
@@ -342,18 +343,26 @@ end
 
 "Get the pressure for an EOS: P = pressure(ρ[, T])"
 function pressure(b::BME3, ρ)
-    let ρ₀ = b.ρ₀, K₀ = b.K₀, dK₀ = b.dK₀, η = ρ/ρ₀
-        return  (3/2*K₀*(η^(7/3) - η^(5/3))
-                 * (1 + 3/4*(dK₀ - 4)*(η^(2/3) - 1)))
-    end
+    ρ₀ = b.ρ₀
+    K₀ = b.K₀
+    dK₀ = b.dK₀
+    η = ρ/ρ₀
+    f = (η^(2/3) - 1)/2
+    F = K₀*(1 + (dK₀ - 4)f)
+
+    P = 3f*F*(1 + 2f)^(5/2)
 end
 
 function pressure(b::BME4, ρ)
-    let ρ₀ = b.bme3.ρ₀, K₀ = b.bme3.K₀, dK₀ = b.bme3.dK₀, d2K₀ = b.d2K₀, η = ρ/ρ₀
-        return pressure(b) + (3/2*K₀*(η^(7/3) - η^(5/3))
-                              * 3/8*(η^(2/3) - 1)^2
-                              * (K₀*d2K₀ + dK₀*(dK₀ - 7) + 143/9))
-    end
+    ρ₀ = b.ρ₀
+    K₀ = b.K₀
+    dK₀ = b.dK₀
+    d2K₀ = b.d2K₀
+    η = ρ/ρ₀
+    f = (η^(2/3) - 1)/2
+    F = K₀*(1 + (dK₀ - 4)f + (K₀*d2K₀ + (dK₀ - 4)*(dK₀ - 3) + 35/9)f^2)
+
+    P = 3f*F*(1 + 2f)^(5/2)
 end
 
 function pressure(v::Vinet, ρ)
