@@ -48,8 +48,8 @@ facts("Combined EOS") do
         end
 
         context("Evaluate the piecewise EOS to the correct values") do
-            @fact eos(2) --> isnan
-            @fact eos(14) --> isnan
+            @fact_throws DomainError eos(2)
+            @fact_throws DomainError eos(14)
             @fact eos(5) --> 5
             @fact eos(8) --> 8^2
             @fact eos(10) --> 10^3
@@ -75,9 +75,9 @@ facts("Combined EOS") do
         # stitch together
         eos = WaterData.StitchedEOS([e1, e2, e3])
 
-        context("Values outside the domain are NaN") do
-            @fact eos(-3, -7) --> isnan
-            @fact eos(11, 12) --> isnan
+        context("Values outside the domain are errors") do
+            @fact_throws DomainError eos(-3, -7)
+            @fact_throws DomainError eos(11, 12)
         end
 
         context("Correct values within the domain") do

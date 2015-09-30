@@ -8,7 +8,7 @@ export PressurePiecewiseEOS, StitchedEOS
 # EOS for signalling when we're outside the domain
 
 immutable OutOfDomainEOS <: EOS; end
-Base.call(OutOfDomainEOS, args...) = NaN
+Base.call(OutOfDomainEOS, args...) = throw(DomainError())
 
 
 # Piecewise 1D EOS
