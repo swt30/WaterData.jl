@@ -9,6 +9,7 @@ facts("Tabular equations of state") do
     # make some basic EOS grids
     gridtable = WaterData.GridEOS([1.,2,3], [1.,2,3], [1. 1 1; 1 1 1; 1 1 1])
     nongridtable = WaterData.UnstructuredEOS([1.,2,2,3], [1.,1,2,2], [1.,2,2,3])
+    linetable = WaterData.LineEOS([1., 2, 3], [5., 7, 8])
 
     context("Checking if a point is in a table") do
         @fact in(2, 2, gridtable) --> true
@@ -50,4 +51,21 @@ facts("Tabular equations of state") do
         @fact WaterData.lininterp(nongridtable, 1.1, 1.9) --> isnan
         @fact WaterData.lininterp(nongridtable, 2.9, 1.1) --> isnan
     end
+
+    context("Linear interpolation of 1-D data") do
+        @fact linetable(1) --> 5
+        @fact linetable(1.5) --> 6
+        @fact linetable(2) --> 7
+        @fact linetable(2.5) --> 7.5
+        @fact linetable(3) --> 8
+        @fact linetable(-9) --> 5  # clips at start
+        @fact linetable(28) --> 8  # clips at end
+    end
+
+    context("Checking tagging of temperature dependence") do
+        @fact WaterData.istempdependent(gridtable) --> true
+        @fact WaterData.istempdependent(linetable) --> false
+        @fact WaterData.istempdependent(nongridtable) --> true
+    end
+
 end

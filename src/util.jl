@@ -3,6 +3,12 @@
 using Iterators: partition
 
 
+# Custom exceptions
+
+"Error raised when a particular method needs to be implemented for some type"
+immutable NotImplementedError <: Exception; end
+
+
 # Duplicate-finding
 
 """ Get indices of the unique items in `itr`
@@ -51,6 +57,9 @@ adjacentpairs(itr) = partition(itr, 2, 1)
 
 "2D analogue of the cross product, *v* × *w* = v₁w₂ - v₂w₁"
 crossprod2d(v::Vector, w::Vector) = v[1]*w[2] - v[2]*w[1]
+
+"Is x outside the closed interval [a, b]?"
+isoutside(x, a, b) = x < a || x > b
 
 "Check if the line segments `AB` and `CD` cross"
 function intersects(A::Vector, B::Vector, C::Vector, D::Vector)

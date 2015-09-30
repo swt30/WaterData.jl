@@ -5,7 +5,6 @@ using Calculus: derivative, gradient
 
 "Directional derivative d(ln ρ)/dT"
 function partiallnT(eos::EOS, P, T)
-    # ForwardDiff.gradient(PT -> log(eos(PT[1], PT[2])), [P, T])[2]
     derivative(δT -> log(eos(P, T + δT)), 0)::Float64
 end
 function partiallnT(s::StitchedEOS, P, T)

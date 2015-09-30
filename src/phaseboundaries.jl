@@ -132,6 +132,7 @@ function PhaseBoundary(phase1::AbstractString, phase2::Symbol)
     PhaseBoundary(phase1, p2)
 end
 
+"Does a given line segment ([x₁, y₁], [x₂, y₂]) intersect a given phase boundary?"
 function intersects(AB::VectorPair, pb::PhaseBoundary)
     linesegments = adjacentpairs(pb)
 

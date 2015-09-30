@@ -7,7 +7,7 @@ export UnstructuredEOS, GridEOS, LineEOS
 
 # EOS types
 
-"Equation of State table"
+"Equation of state table"
 abstract TabularEOS <: EOS
 
 "Equation of state table defined by unstructured (P, T, ρ) points"
@@ -57,6 +57,13 @@ function Base.in(P, T, eos::UnstructuredEOS)
     end
 end
 Base.in(P, T, eos::GridEOS) = in(P, T, BoundingBox(eos))
+
+
+# Tagging temperature dependence
+
+istempdependent(::UnstructuredEOS) = true
+istempdependent(::GridEOS) = true
+istempdependent(::LineEOS) = false
 
 
 # Save EOS data to file
@@ -205,4 +212,4 @@ end
 Base.call(eos::UnstructuredEOS, P, T) = lininterp(eos, P, T)
 Base.call(eos::GridEOS, P, T) = evaluate(eos.spline, P, T)
 Base.call(eos::LineEOS, P) = evaluate(eos.spline, P)
-Base.call(eos::LineEOS, P, T) = evaluate(eos.spline, P, T)
+Base.call(eos::LineEOS, P, T) = evaluate(eos.spline, P)

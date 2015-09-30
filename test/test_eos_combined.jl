@@ -28,7 +28,7 @@ end # module resources
 
 facts("Combined EOS") do
     res = test_eos_combined_resources
-    
+
     context("1D piecewise EOS") do
         # three different versions
         identity = res.TestEOS1D(1)
@@ -40,10 +40,11 @@ facts("Combined EOS") do
             [identity, squared, cubed], [4, 7, 9, 11])
 
         context("Get correct EOS from the piecewise EOS") do
-            before4 = WaterData.get_single_eos(eos, 2)
-            after11 = WaterData.get_single_eos(eos, 12)
-            @fact typeof(before4) --> WaterData.OutOfDomainEOS
-            @fact typeof(after11) --> WaterData.OutOfDomainEOS
+            OutOfDomain = WaterData.OutOfDomainEOS
+
+            @fact typeof(WaterData.extracteos(eos, 2)) --> OutOfDomain
+            @fact typeof(WaterData.extracteos(eos, 5)) --> res.TestEOS1D
+            @fact typeof(WaterData.extracteos(eos, 12)) --> OutOfDomain
         end
 
         context("Evaluate the piecewise EOS to the correct values") do

@@ -18,6 +18,11 @@ facts("Utility functions") do
         @fact WaterData.crossprod2d([1,-1], [3, 4]) --> 7
         @fact WaterData.crossprod2d([1, 2], [3, 4]) --> -2
 
+        # isoutside
+        @fact WaterData.isoutside(3, 2, 4) --> false
+        @fact WaterData.isoutside(2., 3., 4.) --> true
+        @fact WaterData.isoutside(3., 3., 4.) --> false
+
         # intersection testing
         c1 = ([1, 5], [8, 5])
         c2 = ([1, 1], [8, 8])

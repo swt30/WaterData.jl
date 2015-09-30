@@ -5,6 +5,12 @@ using JLD, ProgressMeter
 export PressurePiecewiseEOS, StitchedEOS
 
 
+# EOS for signalling when we're outside the domain
+
+immutable OutOfDomainEOS <: EOS; end
+Base.call(OutOfDomainEOS, args...) = NaN
+
+
 # Piecewise 1D EOS
 
 "Equation of state which is stored piecewise in some coordinate"
@@ -13,32 +19,33 @@ abstract PiecewiseEOS <: EOS
 """ Equation of state which is stored piecewise in the pressure coordinate
 
     * `eoses`: Vector of `EOS`es. Any EOS can be chosen, though it's assumed you
-    will build a `PressurePiecewiseEOS` from 1D EOSes.
+      will build a `PressurePiecewiseEOS` from 1D EOSes.
     * `edges`: Vector of pressure values that bracket each individual EOS. For
-    example, the list [0, 1, 2] would serve to define an EOS with a domain
-    [0, 2], piecewise from [0, 1] and (1, 2].
+      example, the array [0, 1, 2] would serve to define an EOS with a domain
+      [0, 2], piecewise from [0, 1] and (1, 2].
 
     Calling the `PressurePiecewiseEOS` will evaluate the correct EOS for a given
     pressure. """
 immutable PressurePiecewiseEOS <: PiecewiseEOS
-    eoses::Vector{EOS}     # any EOS can go in the middle
+    eoses::Vector{EOS}
     edges::Vector{Float64}
 
     function PressurePiecewiseEOS(eoses, edges)
-        @assert length(edges) == length(eoses) + 1
+        @assert(length(edges) == length(eoses) + 1,
+                "EOS/edge mismatch: need one more edge than number of EOSes")
         new(eoses, edges)
     end
 end
 
-""" Equation of state representing an area outside the evaluation domain.
-    Returns NaN when called. """
-immutable OutOfDomainEOS <: EOS
-end
-
 "Find the appropriate individual EOS in a 1D piecewise `eos` at point `x`"
-function get_single_eos(eos::PiecewiseEOS, x)
-    # if outside the domain, take the edge point
-    if x < first(eos.edges) || x > last(eos.edges)
+function extracteos(eos::PiecewiseEOS, x::Number)
+    if isoutside(x, first(eos.edges), last(eos.edges))
+        if x ≈ first(eos.edges) || x ≈ last(eos.edges)
+            # might be caused by floating point problems
+            warn("""Attempted to evaluate a piecewise EOS just outside its domain.
+                    This may be a floating point precision error.
+                    Consider widening the domain slightly.""")
+            end
         return OutOfDomainEOS()
     end
 
@@ -49,41 +56,67 @@ function get_single_eos(eos::PiecewiseEOS, x)
         end
     end
 end
+extracteos(eos::EOS, args...) = eos  # fallback for when it's not piecewise
 
 # calling a PressurePiecewiseEOS just evaluates the appropriate EOS
-Base.call(eos::PressurePiecewiseEOS, P) = get_single_eos(eos, P)(P)
-# OutOfDomainEOS gives NaN when called
-Base.call(o::OutOfDomainEOS, P) = NaN
-Base.call(o::OutOfDomainEOS, P, T) = NaN
+Base.call(eos::PressurePiecewiseEOS, P) = extracteos(eos, P)(P)
+
+
+# Save piecewise EOSes
 
 """ Save piecewise EOSes to `eos-functional.jld`:
 
     * The water EOS used by Sara Seager in her 2007 paper, consisting of an ice
     VII BME at low pressures, an intermediate density functional theory
-    calculation, and the TFD at high pressures """
-function save_piecewise_eos!()
+    calculation, and the TFD at high pressures.
+    * The MgSiO3 EOS from that paper, consisting of a 4th-order BME at low
+    pressures and the TFD at high pressures.
+    * The Fe EOS from that paper, consisting of a Vinet fit at low pressures and
+    the TFD at high pressures."""
+function save_piecewise_eoses!()
     funcs = load("$(config.datadir)/eos-functional.jld")
     tables = load("$(config.datadir)/eos-tabular.jld")
 
-    eoses = [funcs["seager"]["h2o"],
-    tables["seager_dft"],
-    funcs["seager"]["h2o_tfd"]]
-    transition_pressures = [0, 44.3e9, 7686e9, Inf]
+    h2o = let
+        eoses = [funcs["seager"]["h2o"],
+                 tables["seager_dft"],
+                 funcs["seager"]["h2o_tfd"]]
+        transitionP = [0, 44.3e9, 7686e9, Inf]
+        raw = PressurePiecewiseEOS(eoses, transitionP)
+        P = logspace(5, 19)
+        ρ = map(raw, P)
+        LineEOS(P, ρ)
+    end
 
-    raw = PressurePiecewiseEOS(eoses, transition_pressures)
-    P = logspace(5, 14)
-    ρ = map(raw, P)
-    grid = LineEOS(P, ρ)
+    mgsio3 = let
+        eoses = [funcs["seager"]["mgsio3_pv"],
+            funcs["seager"]["mgsio3_tfd"]]
+        transitionP = [0, 1.35e13, Inf]
+        raw = PressurePiecewiseEOS(eoses, transitionP)
+        P = logspace(5, 19)
+        ρ = map(raw, P)
+        LineEOS(P, ρ)
+    end
 
-    seager = Dict("seager-h2o-raw"=>raw, "seager-h2o-grid"=>grid)
-    save("$(config.datadir)/eos-piecewise.jld", seager)
+    fe = let
+        eoses = [funcs["seager"]["fe_eps"],
+            funcs["seager"]["fe_tfd"]]
+        transitionP = [0, 2.09e14, Inf]
+        raw = PressurePiecewiseEOS(eoses, transitionP)
+        P = logspace(5, 19)
+        ρ = map(raw, P)
+        LineEOS(P, ρ)
+    end
+
+    save("$(config.datadir)/eos-piecewise.jld", "h2o", h2o, "mgsio3", mgsio3,
+        "fe", fe)
 end
 
 
 # Stitched (piecewise 2D) EOS
 
 "Equation of state which consists of several other EOS stitched together"
-type StitchedEOS <: EOS  # TODO: should this be a subtype of PiecewiseEOS instead?
+type StitchedEOS <: EOS
     eoses::Vector{EOS}
 end
 StitchedEOS(a::EOS, b...) = StitchedEOS([a, b...])
@@ -99,9 +132,10 @@ function BoundingBox(s::StitchedEOS)
 end
 
 "Find the appropriate individual EOS in a 2D piecewise `eos` at point (`P`,`T`)"
-function get_single_eos(s::StitchedEOS, P, T)
+function extracteos(s::StitchedEOS, P, T)
     i = findfirst(e -> (P, T) in e, s.eoses)
     if i == 0
+        # no EOS was found for this value of P and T
         OutOfDomainEOS()
     else
         s.eoses[i]
@@ -109,7 +143,7 @@ function get_single_eos(s::StitchedEOS, P, T)
 end
 
 # calling a PressurePiecewiseEOS just evaluates the appropriate EOS
-Base.call(s::StitchedEOS, P, T) = get_single_eos(s, P, T)(P, T)
+Base.call(s::StitchedEOS, P, T) = extracteos(s, P, T)(P, T)
 
 
 # Full EOS
@@ -134,11 +168,13 @@ function save_full_eos!()
     funcs["choukroungrasset"]["V"],
     funcs["choukroungrasset"]["VI"],
     funcs["misc"]["mgd_iceVII"],
-    funcs["misc"]["tfd_iceX"],
-    funcs["misc"]["tfd_beyond"],
+    funcs["misc"]["iapws_pastfrench"],
+    funcs["misc"]["iceX"],
+    funcs["misc"]["iceX_beyond"],
     funcs["misc"]["iapws_highpressure"],
     funcs["misc"]["iapws_highprestemp"],
-    funcs["misc"]["iapws_hightemp"])
+    funcs["misc"]["iapws_hightemp"],
+    funcs["misc"]["fallback"])
 
     # set the resolution
     Nx = config.grid_resolution
@@ -152,7 +188,7 @@ function save_full_eos!()
     # compute ρ
     ρs = zeros(Nx, Ny)
     meter = Progress(Nx*Ny, "Calculating ρ...")
-    for (i, P) in enumerate(Ps), (j, T) in enumerate(Ts)
+    for (j, T) in enumerate(Ts), (i, P) in enumerate(Ps)
         ρs[i, j] = eos(P, T)
         next!(meter)
     end
@@ -160,10 +196,14 @@ function save_full_eos!()
     # compute α
     αs = zeros(Nx, Ny)
     meter = Progress(Nx*Ny, "Calculating α...")
-    for (i, P) in enumerate(Ps), (j, T) in enumerate(Ts)
+    for (j, T) in enumerate(Ts), (i, P) in enumerate(Ps)
         αs[i, j] = thermalexpansivity(eos, P, T)
         next!(meter)
     end
+
+    # We throw away values less than zero, as we don't expect this behaviour
+    # (except perhaps for low-pressure ices which have negative expansivity)
+    clamp!(αs, 0, Inf)
 
     # make EOSes and write to file
     grideos = GridEOS(Ps, Ts, ρs)

@@ -1,15 +1,29 @@
 # Equation of state types
 
-export EOS
+export EOS, istempdependent
 
 
 # EOS type
 
 abstract EOS
 
-# Testing for inclusion
-Base.in(xy, eos::EOS) = in(xy..., eos)
+
+# Include EOS subsections
 
 include("eos_functions.jl")
 include("eos_tables.jl")
 include("eos_combined.jl")
+
+
+# Testing for inclusion
+
+Base.in(xy, eos::EOS) = in(xy..., eos)
+
+
+# Marking temperature-dependent EOSes
+
+"Does a given EOS have a temperature dependent component?"
+function istempdependent(eos::EOS)
+    # by default, this throws an error - later types should override
+    throw(NotImplementedError())
+end

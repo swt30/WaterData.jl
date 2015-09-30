@@ -50,6 +50,7 @@ facts("Functional equations of state") do
         for (P, ρ) in zip(Ps, ρs)
             @fact log(vinet(P)) --> roughly(log(ρ), rtol=0.01)
         end
+        @fact WaterData.istempdependent(vinet) --> false
     end
 
     context("BME3") do
@@ -62,6 +63,7 @@ facts("Functional equations of state") do
         for (P, ρ) in zip(Ps, ρs)
             @fact log(bme3(P)) --> roughly(log(ρ), rtol=0.01)
         end
+        @fact WaterData.istempdependent(bme3) --> false
     end
 
     context("BME4") do
@@ -75,6 +77,7 @@ facts("Functional equations of state") do
         for (P, ρ) in zip(Ps, ρs)
             @fact log(bme4(P)) --> roughly(log(ρ), rtol=0.01)
         end
+        @fact WaterData.istempdependent(bme4) --> false
     end
 
     context("MGD thermal expansivity") do
@@ -93,6 +96,7 @@ facts("Functional equations of state") do
             for (P, ρ) in zip(Ps, ρs)
                 @fact log(mgd(P, T)) --> roughly(log(ρ), rtol=0.01)
             end
+            @fact WaterData.istempdependent(mgd) --> true
         end
     end
 
@@ -117,6 +121,10 @@ facts("Functional equations of state") do
         @fact map(cgIII, Ps[2:3], Ts[2:3]) --> roughly(ρs[2:3], rtol=0.01)
         @fact map(cgV, Ps[4:5], Ts[4:5]) --> roughly(ρs[4:5], rtol=0.01)
         @fact cgVI(Ps[6], Ts[6]) --> roughly(ρs[6], rtol=0.01)
+        @fact WaterData.istempdependent(cgI) --> true
+        @fact WaterData.istempdependent(cgIII) --> true
+        @fact WaterData.istempdependent(cgV) --> true
+        @fact WaterData.istempdependent(cgVI) --> true
     end
 
     context("EOS inversion") do
@@ -126,12 +134,14 @@ facts("Functional equations of state") do
             ρ_fe = 10000
             P_fe = WaterData.pressure(f_fe, ρ_fe)
             @fact f_fe(P_fe) --> roughly(ρ_fe)
+            @fact WaterData.istempdependent(f_fe) --> false
 
             # so does the BME
             f_h2o = WaterData.BME(1.46e3, 23.7e9,  4.15)  # BME for ice VII
             ρ_h2o = 5000
             P_h2o = WaterData.pressure(f_h2o, ρ_h2o)
             @fact f_h2o(P_h2o) --> roughly(ρ_h2o)
+            @fact WaterData.istempdependent(f_h2o) --> false
         end
     end
 end
