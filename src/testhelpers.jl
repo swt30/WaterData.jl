@@ -4,7 +4,7 @@
 "Test helper functions and FactCheck extensions"
 module testhelpers
 
-using FactCheck
+using FactCheck  # for testing
 
 "Closure to check if something is between `a` and `b`"
 function between(a, b)

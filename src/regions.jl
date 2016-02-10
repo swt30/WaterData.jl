@@ -1,6 +1,6 @@
 # Defining regions on the plane, testing for inclusion, tessellations, and interpolation
 
-using VoronoiDelaunay
+using VoronoiDelaunay  # for creating Delaunay meshes on unstructured data
 
 
 # Region types

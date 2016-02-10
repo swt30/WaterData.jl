@@ -1,6 +1,6 @@
 # Calculate and use phase boundaries for water
 
-using Dierckx
+using Dierckx  # for interpolations
 
 export PhaseBoundary
 
@@ -38,9 +38,8 @@ immutable PhaseBoundaryPars
     d::Float64
     e::Float64
 end
+"Read a phase boundary from a file"
 function PhaseBoundaryPars(phase1::AbstractString, phase2::AbstractString)
-    # Read a phase boundary from file
-    # TODO: re-document this constructor once permitted
     table = read_phase_boundary_table()
 
     match11 = (table[:, 1] .== phase1)

@@ -1,6 +1,6 @@
 # Calculate the thermal expansivity αᵥ of an EOS
 
-using Calculus: derivative, gradient
+using Calculus: derivative, gradient  # to evaluate derivatives
 
 
 "Directional derivative d(ln ρ)/dT"

@@ -1,6 +1,9 @@
 # Tabular equations of state
 
-using DataFrames, JLD, VoronoiDelaunay, Dierckx
+using DataFrames  # for loading data in tabular format with headings
+using JLD  # for accessing data in .jld files (HDF5-based)
+using VoronoiDelaunay  # for making Delaunay meshes on unstructured data
+using Dierckx  # for interpolation
 
 export UnstructuredEOS, GridEOS, LineEOS
 
@@ -119,8 +122,8 @@ function save_tabular_eoses!()
 
         file["seager_dft"] = let
             df = readtable("$(config.rawdata)/seager-h2o-dft.eos")
-            P = collect(df[:P])
-            ρ = collect(df[:rho])
+            P = collect(df[:P]) # in Pa
+            ρ = collect(df[:rho]) # in kg/m^3
 
             LineEOS(P, ρ)
         end
@@ -192,8 +195,7 @@ function lininterp(eos::UnstructuredEOS, P, T)
     end
 end
 
-""" Put the `eos` on a grid of a given `resolution` (default
-    $(config.grid_resolution))"""
+""" Put the `eos` on a grid of a given `resolution`"""
 function grid(eos::UnstructuredEOS, resolution=config.grid_resolution)
     P = logspace(extrema(log10(eos.P))..., resolution)
     T = logspace(extrema(log10(eos.T))..., resolution)

@@ -1,4 +1,4 @@
-# Contains the configuration module, holding global settings
+# Contains the configuration module, holding global settings for the package
 
 
 "Configuration options"

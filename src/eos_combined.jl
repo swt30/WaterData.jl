@@ -1,17 +1,18 @@
 # Defines equations of state which are combinations of others.
 
-using JLD, ProgressMeter
+using JLD  # for accessing data files in .jld files (HDF5-based)
+using ProgressMeter  # for showing progress bars during calculations
 
 export PressurePiecewiseEOS, StitchedEOS
 
 
-# EOS for signalling when we're outside the domain
+# This EOS is used for signalling we're outside the domain
 
 immutable OutOfDomainEOS <: EOS; end
 Base.call(::OutOfDomainEOS, args...) = throw(DomainError())
 
 
-# Piecewise 1D EOS
+# Piecewise one-dimensional EOS
 
 "Equation of state which is stored piecewise in some coordinate"
 abstract PiecewiseEOS <: EOS
@@ -19,13 +20,13 @@ abstract PiecewiseEOS <: EOS
 """ Equation of state which is stored piecewise in the pressure coordinate
 
     * `eoses`: Vector of `EOS`es. Any EOS can be chosen, though it's assumed you
-      will build a `PressurePiecewiseEOS` from 1D EOSes.
+      will build a `PressurePiecewiseEOS` from one-dimensional `EOS`es.
     * `edges`: Vector of pressure values that bracket each individual EOS. For
       example, the array [0, 1, 2] would serve to define an EOS with a domain
       [0, 2], piecewise from [0, 1] and (1, 2].
 
-    Calling the `PressurePiecewiseEOS` will evaluate the correct EOS for a given
-    pressure. """
+    Calling the `PressurePiecewiseEOS` will evaluate the correct EOS at a given
+    pressure. For example, if called """
 immutable PressurePiecewiseEOS <: PiecewiseEOS
     eoses::Vector{EOS}
     edges::Vector{Float64}
@@ -131,7 +132,7 @@ function BoundingBox(s::StitchedEOS)
     BoundingBox(xmin, xmax, ymin, ymax)
 end
 
-"Find the appropriate individual EOS in a 2D piecewise `eos` at point (`P`,`T`)"
+"Find the appropriate individual EOS in a 2D piecewise `StitchedEOS` at point (`P`,`T`)"
 function extracteos(s::StitchedEOS, P, T)
     i = findfirst(e -> (P, T) in e, s.eoses)
     if i == 0
@@ -146,7 +147,7 @@ end
 Base.call(s::StitchedEOS, P, T) = extracteos(s, P, T)(P, T)
 
 
-# Full EOS
+# Full EOS generation
 
 """ Save the full EOS and thermal expansivity to `eos-full.jld`:
 

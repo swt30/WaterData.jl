@@ -1,6 +1,8 @@
 # Functional equations of state
 
-using DataFrames, JLD, Roots
+using DataFrames  # for loading data in tabular format with headings
+using JLD  # for accessing data in .jld files (HDF5-based)
+using Roots: fzero  # for numerical inversion
 
 # simple EOSes
 export ConstantEOS, PolytropicEOS, BME, BME3, BME4, Vinet, TFD
@@ -504,7 +506,9 @@ function save_functional_eoses!()
             VIII = map(phase -> pb(:VIII, phase), [:VI, :VII, :X])
             X = map(phase -> pb(:X, phase), [:L, :VIII, :VII])
 
-            # fix up some of those columns so the polygons aren't weird
+            # since the regions are just lists of P,T pairs for each side,
+            # we need to ensure that they have a consistent orientation;
+            # we do this by flipping the sides that have the wrong orientation
             function flipcolumns!(phase, cols)
                 for c in cols
                     reverse!(phase[c].P)
@@ -518,6 +522,7 @@ function save_functional_eoses!()
             flipcolumns!(VII, 3)
             flipcolumns!(X, (2, 3))
 
+            # now that the regions have consistent orientations, we can
             # join the boundaries together
             concatP(phase) = vcat([pb.P for pb in phase]...)
             concatT(phase) = vcat([pb.T for pb in phase]...)
@@ -612,7 +617,6 @@ function save_functional_eoses!()
             mgd_bme = MGDPressureEOS(bme, T₀, θD₀, γ₀, q, n)
             bounded_mgd_bme = BoundedEOS(mgd_bme, phaseregions["VII"])
 
-            # fallback eos
             fallback_eos = ConstantEOS(1.)
 
             Dict(
