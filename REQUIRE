@@ -1,5 +1,5 @@
 # Needs features only available in julia 0.4
-julia 0.4-
+julia 0.4
 
 # Data handling and wrangling
 JLD
