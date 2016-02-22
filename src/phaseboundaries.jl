@@ -139,9 +139,50 @@ function intersects(AB::VectorPair, pb::PhaseBoundary)
 end
 
 
-# Save phase boundaries to file
-
+"Save phase boundaries to file"
 function save_phase_boundaries!()
+    pb = PhaseBoundary
+    
+    I = map(phase -> pb(:I, phase), [:L, :III, :II])
+    II = map(phase -> pb(:II, phase), [:I, :III, :V, :VI])
+    III = map(phase -> pb(:III, phase), [:L, :V, :II, :I])
+    V = map(phase -> pb(:V, phase), [:L, :VI, :II, :III])
+    VI = map(phase -> pb(:VI, phase), [:L, :VII, :VIII, :II, :V])
+    VII = map(phase -> pb(:VII, phase), [:L, :X, :VIII, :VI])
+    VIII = map(phase -> pb(:VIII, phase), [:VI, :VII, :X])
+    X = map(phase -> pb(:X, phase), [:L, :VIII, :VII])
+
+    # since the regions are just lists of P,T pairs for each side,
+    # we need to ensure that they have a consistent orientation;
+    # we do this by flipping the sides that have the wrong orientation
+    function flipcolumns!(phase, cols)
+        for c in cols
+            reverse!(phase[c].P)
+            reverse!(phase[c].T)
+        end
+    end
+    flipcolumns!(I, 3)
+    flipcolumns!(III, (3, 4))
+    flipcolumns!(V, (2, 3))
+    flipcolumns!(VI, (2, 3, 4))
+    flipcolumns!(VII, 3)
+    flipcolumns!(X, (2, 3))
+
+    # now that the regions have consistent orientations, we can
+    # join the boundaries together
+    concatP(phase) = vcat([pb.P for pb in phase]...)
+    concatT(phase) = vcat([pb.T for pb in phase]...)
+
+    regions = Dict(
+                   "I" => Polygon(concatP(I), concatT(I)),
+                   "II" => Polygon(concatP(II), concatT(II)),
+                   "III" => Polygon(concatP(III), concatT(III)),
+                   "V" => Polygon(concatP(V), concatT(V)),
+                   "VI" => Polygon(concatP(VI), concatT(VI)),
+                   "VII" => Polygon(concatP(VII), concatT(VII)),
+                   "VIII" => Polygon(concatP(VIII), concatT(VIII)),
+                   "X" => Polygon(concatP(X), concatT(X)))
+    
     dunaeva_table = read_phase_boundary_table()
     dunaeva_boundaries = maprows(dunaeva_table) do row
         p1, p2 = row[1:2]
@@ -156,7 +197,8 @@ function save_phase_boundaries!()
     end
 
     boundaries = Dict("iapws"=>iapws_boundary,
-                      "dunaeva"=>dunaeva_boundaries)
+                      "dunaeva"=>dunaeva_boundaries,
+                      "regions"=>regions)
 
     save("$(config.datadir)/phase-boundaries.jld", boundaries)
 

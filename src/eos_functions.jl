@@ -490,53 +490,11 @@ istempdependent(::MGDPressureEOS) = true
 
 # Save EOS data to file
 
-"Load EOS data from tabular format and save to JLD files"
+"Load EOS data from tabular format and save to JLD files as functional representations"
 function save_functional_eoses!()
     jldopen("$(config.datadir)/eos-functional.jld", "w") do file
-        # phase boundaries
-        phaseregions = let
-            pb = PhaseBoundary
-
-            I = map(phase -> pb(:I, phase), [:L, :III, :II])
-            II = map(phase -> pb(:II, phase), [:I, :III, :V, :VI])
-            III = map(phase -> pb(:III, phase), [:L, :V, :II, :I])
-            V = map(phase -> pb(:V, phase), [:L, :VI, :II, :III])
-            VI = map(phase -> pb(:VI, phase), [:L, :VII, :VIII, :II, :V])
-            VII = map(phase -> pb(:VII, phase), [:L, :X, :VIII, :VI])
-            VIII = map(phase -> pb(:VIII, phase), [:VI, :VII, :X])
-            X = map(phase -> pb(:X, phase), [:L, :VIII, :VII])
-
-            # since the regions are just lists of P,T pairs for each side,
-            # we need to ensure that they have a consistent orientation;
-            # we do this by flipping the sides that have the wrong orientation
-            function flipcolumns!(phase, cols)
-                for c in cols
-                    reverse!(phase[c].P)
-                    reverse!(phase[c].T)
-                end
-            end
-            flipcolumns!(I, 3)
-            flipcolumns!(III, (3, 4))
-            flipcolumns!(V, (2, 3))
-            flipcolumns!(VI, (2, 3, 4))
-            flipcolumns!(VII, 3)
-            flipcolumns!(X, (2, 3))
-
-            # now that the regions have consistent orientations, we can
-            # join the boundaries together
-            concatP(phase) = vcat([pb.P for pb in phase]...)
-            concatT(phase) = vcat([pb.T for pb in phase]...)
-
-            regions = Dict(
-                 "I" => Polygon(concatP(I), concatT(I)),
-                 "II" => Polygon(concatP(II), concatT(II)),
-                 "III" => Polygon(concatP(III), concatT(III)),
-                 "V" => Polygon(concatP(V), concatT(V)),
-                 "VI" => Polygon(concatP(VI), concatT(VI)),
-                 "VII" => Polygon(concatP(VII), concatT(VII)),
-                 "VIII" => Polygon(concatP(VIII), concatT(VIII)),
-                 "X" => Polygon(concatP(X), concatT(X)))
-        end
+        # bring in phase boundaries
+        phaseregions = load_phase_boundaries()["regions"]
 
         # Choukroun and Grasset's equations of state
         ckg = let
@@ -576,13 +534,6 @@ function save_functional_eoses!()
 
         # Miscellaneous
         misc = let
-            piecewise = load_piecewise_eoses()
-            # TFD in the ice X region
-            iceXbound = phaseregions["X"]
-            beyondbound = BoundingBox(4e10, Inf, -Inf, Inf)
-            iceX = BoundedEOS(piecewise["h2o"], iceXbound)
-            iceX_beyond = BoundedEOS(piecewise["h2o"], beyondbound)
-
             # IAPWS extensions
             extent1 = BoundingBox(1e9, 1e11, 273.16, Tc)
             ρrange1 = (1e-6, 1e6)
@@ -620,8 +571,6 @@ function save_functional_eoses!()
             fallback_eos = ConstantEOS(1.)
 
             Dict(
-                "iceX" => iceX,
-                "iceX_beyond" => iceX_beyond,
                 "iapws_hightemp" => iapws_hightemp,
                 "iapws_highpressure" => iapws_highpressure,
                 "iapws_highprestemp" => iapws_highprestemp,
