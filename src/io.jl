@@ -24,6 +24,8 @@ load_functional_eoses() = loaddata("eos-functional.jld")
 load_piecewise_eoses() = loaddata("eos-piecewise.jld")
 "Get the complete stitched equation of state and thermal expansivity from storage"
 load_full_eos() = loaddata("eos-full.jld")
+"Get the heat capacity from storage"
+load_heat_capacity() = loaddata("heatcapacity.jld")
 
 function generate_jlds!()
     info("Generating data/phase-boundaries.jld")
@@ -34,6 +36,8 @@ function generate_jlds!()
     save_tabular_eoses!()
     info("Generating data/eos-piecewise.jld")
     save_piecewise_eoses!()
+    info("Generating data/heatcapacity.jld")
+    save_heat_capacity!()
     info("Generating data/eos-full.jld")
     save_full_eos!()
 

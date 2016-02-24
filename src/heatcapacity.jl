@@ -1,6 +1,8 @@
 # The heat capacity of water
 
-using Dierckx
+using Dierckx  # for interpolation
+
+export GridHeatCapacity
 
 
 # Types for different heat capacity behaviours
@@ -62,3 +64,15 @@ Base.call(cp::ConstantHeatCapacity, P, T) = cp.value
 Base.call(cp::TFuncHeatCapacity, T) = cp.func(T)
 Base.call(cp::TFuncHeatCapacity, P, T) = cp.func(T)
 Base.call(cp::PTFuncHeatCapacity, P, T) = cp.func(P, T)
+
+
+# Make and save heat capacity
+
+"Save the water heat capacity to a JLD file"
+function save_heat_capacity!()
+    jldopen("$(config.datadir)/heatcapacity.jld", "w") do file
+        # make the heat capacity
+        c_p = GridHeatCapacity("$(config.rawdata)/heatcap-h2o.dat")
+        write(file, "heatcap_h2o", c_p)
+    end
+end
