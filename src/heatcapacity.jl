@@ -2,7 +2,7 @@
 
 using Dierckx  # for interpolation
 
-export GridHeatCapacity
+export HeatCapacity, GridHeatCapacity
 
 
 # Types for different heat capacity behaviours
