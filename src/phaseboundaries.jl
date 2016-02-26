@@ -142,7 +142,7 @@ end
 "Save phase boundaries to file"
 function save_phase_boundaries!()
     pb = PhaseBoundary
-    
+
     I = map(phase -> pb(:I, phase), [:L, :III, :II])
     II = map(phase -> pb(:II, phase), [:I, :III, :V, :VI])
     III = map(phase -> pb(:III, phase), [:L, :V, :II, :I])
@@ -173,8 +173,7 @@ function save_phase_boundaries!()
     concatP(phase) = vcat([pb.P for pb in phase]...)
     concatT(phase) = vcat([pb.T for pb in phase]...)
 
-    regions = Dict(
-                   "I" => Polygon(concatP(I), concatT(I)),
+    regions = Dict("I" => Polygon(concatP(I), concatT(I)),
                    "II" => Polygon(concatP(II), concatT(II)),
                    "III" => Polygon(concatP(III), concatT(III)),
                    "V" => Polygon(concatP(V), concatT(V)),
@@ -182,7 +181,7 @@ function save_phase_boundaries!()
                    "VII" => Polygon(concatP(VII), concatT(VII)),
                    "VIII" => Polygon(concatP(VIII), concatT(VIII)),
                    "X" => Polygon(concatP(X), concatT(X)))
-    
+
     dunaeva_table = read_phase_boundary_table()
     dunaeva_boundaries = maprows(dunaeva_table) do row
         p1, p2 = row[1:2]
@@ -200,7 +199,11 @@ function save_phase_boundaries!()
                       "dunaeva"=>dunaeva_boundaries,
                       "regions"=>regions)
 
-    save("$(config.datadir)/phase-boundaries.jld", boundaries)
+    jldopen("$(config.datadir)/phase-boundaries.jld", "w") do file
+        addrequire(file, WaterData)
+        write(file, "boundaries", boundaries)
+        write(file, "regions", regions)
+    end
 
     return nothing
 end

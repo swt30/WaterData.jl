@@ -119,8 +119,14 @@ function save_piecewise_eoses!()
     iceX = BoundedEOS(h2o, iceXbound)
     iceX_beyond = BoundedEOS(h2o, beyondXbound)
 
-    save("$(config.datadir)/eos-piecewise.jld", "h2o", h2o, "mgsio3", mgsio3,
-        "fe", fe, "iceX", iceX, "iceX_beyond", iceX_beyond)
+    jldopen("$(config.datadir)/eos-piecewise.jld", "w") do file
+        addrequire(file, WaterData)
+        write(file, "h2o", h2o)
+        write(file, "mgsio3", mgsio3)
+        write(file, "fe", fe)
+        write(file, "iceX", iceX)
+        write(file, "iceX_beyond", iceX_beyond)
+    end
 end
 
 
@@ -171,22 +177,21 @@ function save_full_eos!()
     piecewise = load_piecewise_eoses()
 
     # EOSes listed earlier here have priority
-    eos = WaterData.StitchedEOS(
-    tables["iapws"],
-    tables["sugimura"],
-    tables["french"],
-    funcs["choukroungrasset"]["I"],
-    funcs["choukroungrasset"]["III"],
-    funcs["choukroungrasset"]["V"],
-    funcs["choukroungrasset"]["VI"],
-    funcs["misc"]["mgd_iceVII"],
-    funcs["misc"]["iapws_pastfrench"],
-    piecewise["iceX"],
-    piecewise["iceX_beyond"],
-    funcs["misc"]["iapws_highpressure"],
-    funcs["misc"]["iapws_highprestemp"],
-    funcs["misc"]["iapws_hightemp"],
-    funcs["misc"]["fallback"])
+    eos = WaterData.StitchedEOS(tables["iapws"],
+                                tables["sugimura"],
+                                tables["french"],
+                                funcs["choukroungrasset"]["I"],
+                                funcs["choukroungrasset"]["III"],
+                                funcs["choukroungrasset"]["V"],
+                                funcs["choukroungrasset"]["VI"],
+                                funcs["misc"]["mgd_iceVII"],
+                                funcs["misc"]["iapws_pastfrench"],
+                                piecewise["iceX"],
+                                piecewise["iceX_beyond"],
+                                funcs["misc"]["iapws_highpressure"],
+                                funcs["misc"]["iapws_highprestemp"],
+                                funcs["misc"]["iapws_hightemp"],
+                                funcs["misc"]["fallback"])
 
     # set the resolution
     Nx = config.grid_resolution
@@ -220,6 +225,10 @@ function save_full_eos!()
     # make EOSes and write to file
     grideos = GridEOS(Ps, Ts, ρs)
     thermexp = GridEOS(Ps, Ts, αs)
-    save("$(WaterData.config.datadir)/eos-full.jld",
-    "raw", eos, "grid", grideos, "thermexp", thermexp)
+    jldopen("$(WaterData.config.datadir)/eos-full.jld", "w") do file
+        addrequire(file, WaterData)
+        write(file, "raw", eos)
+        write(file, "grid", grideos)
+        write(file, "thermexp", thermexp)
+    end
 end

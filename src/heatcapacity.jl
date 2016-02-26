@@ -71,6 +71,7 @@ Base.call(cp::PTFuncHeatCapacity, P, T) = cp.func(P, T)
 "Save the water heat capacity to a JLD file"
 function save_heat_capacity!()
     jldopen("$(config.datadir)/heatcapacity.jld", "w") do file
+        addrequire(file, WaterData)
         # make the heat capacity
         c_p = GridHeatCapacity("$(config.rawdata)/heatcap-h2o.dat")
         write(file, "heatcap_h2o", c_p)
