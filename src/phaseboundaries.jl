@@ -200,7 +200,6 @@ function save_phase_boundaries!()
                       "regions"=>regions)
 
     jldopen("$(config.datadir)/phase-boundaries.jld", "w") do file
-        addrequire(file, WaterData)
         write(file, "boundaries", boundaries)
         write(file, "regions", regions)
     end

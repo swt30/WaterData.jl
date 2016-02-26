@@ -493,8 +493,6 @@ istempdependent(::MGDPressureEOS) = true
 "Load EOS data from tabular format and save to JLD files as functional representations"
 function save_functional_eoses!()
     jldopen("$(config.datadir)/eos-functional.jld", "w") do file
-        addrequire(file, WaterData)
-
         # bring in phase boundaries
         phaseregions = load_phase_boundaries()["regions"]
 

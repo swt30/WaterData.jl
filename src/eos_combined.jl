@@ -226,7 +226,6 @@ function save_full_eos!()
     grideos = GridEOS(Ps, Ts, ρs)
     thermexp = GridEOS(Ps, Ts, αs)
     jldopen("$(WaterData.config.datadir)/eos-full.jld", "w") do file
-        addrequire(file, WaterData)
         write(file, "raw", eos)
         write(file, "grid", grideos)
         write(file, "thermexp", thermexp)

@@ -74,8 +74,6 @@ istempdependent(::LineEOS) = false
 "Load EOS data from tabular format and save to JLD files"
 function save_tabular_eoses!()
     jldopen("$(config.datadir)/eos-tabular.jld", "w") do file
-        addrequire(file, WaterData)
-
         file["sugimura"] = let
             df = readtable("$(config.rawdata)/Sugimura.eos", allowcomments=true, separator=',')
             P = collect(df[:P]) # in GPa

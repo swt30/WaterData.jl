@@ -7,11 +7,7 @@ using JLD  # for loading files
 
 "Load a file from the data directory"
 function loaddata(filename)
-    try
-        load(joinpath(config.datadir, filename))
-    catch SystemError
-        error("File does not exist: try running `WaterData.generate_jlds!()` first")
-    end
+    load(joinpath(config.datadir, filename))
 end
 
 "Get the tabular equations of state from storage"
