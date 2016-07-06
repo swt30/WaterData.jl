@@ -95,7 +95,7 @@ function save_piecewise_eoses!()
     "Seager's MgSiO3 piecewise EOS"
     mgsio3 = let
         eoses = [funcs["seager"]["mgsio3_pv"],
-            funcs["seager"]["mgsio3_tfd"]]
+                 funcs["seager"]["mgsio3_tfd"]]
         transitionP = [0, 1.35e13, Inf]
         raw = PressurePiecewiseEOS(eoses, transitionP)
         P = logspace(5, 19)
@@ -106,7 +106,7 @@ function save_piecewise_eoses!()
     "Seager's Fe piecewise EOS"
     fe = let
         eoses = [funcs["seager"]["fe_eps"],
-            funcs["seager"]["fe_tfd"]]
+                 funcs["seager"]["fe_tfd"]]
         transitionP = [0, 2.09e14, Inf]
         raw = PressurePiecewiseEOS(eoses, transitionP)
         P = logspace(5, 19)
@@ -191,6 +191,7 @@ function save_full_eos!()
                                 funcs["misc"]["iapws_highpressure"],
                                 funcs["misc"]["iapws_highprestemp"],
                                 funcs["misc"]["iapws_hightemp"],
+                                funcs["misc"]["ideal_gas"],
                                 funcs["misc"]["fallback"])
 
     # set the resolution

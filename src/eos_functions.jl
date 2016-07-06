@@ -28,6 +28,11 @@ abstract InverseFunctionalEOS <: FunctionalEOS
 
 # Specific EOSes
 
+"The ideal gas equation of state"
+immutable IdealGas <: FunctionalEOS
+    R::Float64
+end
+
 immutable ConstantEOS <: FunctionalEOS
     ρ::Float64
 end
@@ -239,7 +244,7 @@ function dϕr3(I::IAPWS, δ, τ, i)
         ϵ = I.ϵ[i], β = I.β[i], γ = I.γ[i]
 
         (n * δ^d * τ^t * exp(-α*(δ-ϵ)^2 - β*(τ-γ)^2)
-            * (d/δ - 2α*(δ - ϵ)))
+         * (d/δ - 2α*(δ - ϵ)))
     end
 end
 function dϕr4(I::IAPWS, δ, τ, i)
@@ -342,10 +347,10 @@ function β_(n::Integer, ϵ::Vector{Float64})
     n += 1 # adjust n from 2-5 to 3-6
     let g = _tfd_g_coeffs
         return 1./((g[n, 1]
-                  + g[n, 2] * (ϵ.^(1/2))
-                  + g[n, 3] * ϵ
-                  + g[n, 4] * (ϵ.^(3/2))
-                  + g[n, 5] * (ϵ.^2)).^(n-1))
+                    + g[n, 2] * (ϵ.^(1/2))
+                    + g[n, 3] * ϵ
+                    + g[n, 4] * (ϵ.^(3/2))
+                    + g[n, 5] * (ϵ.^2)).^(n-1))
     end
 end
 
@@ -410,7 +415,7 @@ function Base.call(eos::TFD, P)
         ϕ   = (3^(1/3))/20 + ϵ./(4 .*(3 .^(1/3)))
         α   = 1./(1.941E-2 - ϵ.^(1/2).*6.277E-2 + ϵ.*1.076)
         x₀0 = (8.884E-3 + (ϵ.^(1/2)).*4.998E-1
-                            + ϵ.*5.2604E-1).^(-1)
+               + ϵ.*5.2604E-1).^(-1)
         β₀ = x₀0.*ϕ - 1
         β₁ = β₀.*α + ((1 + β₀)./ϕ)
         β₂ = β_(2, ϵ)
@@ -447,6 +452,7 @@ function Base.call(eos::InverseFunctionalEOS, P, T)
 end
 
 Base.call(eos::ConstantEOS, P, T) = eos.ρ
+Base.call(eos::IdealGas, P, T) = P / (eos.R * T)
 
 "Minimum density of an EOS"
 ρmin(eos::EOS) = eos.ρmin
@@ -568,6 +574,11 @@ function save_functional_eoses!()
             mgd_bme = MGDPressureEOS(bme, T₀, θD₀, γ₀, q, n)
             bounded_mgd_bme = BoundedEOS(mgd_bme, phaseregions["VII"])
 
+            # ideal gas for low-pressure region
+            ideal_gas_eos = IdealGas(R_h2o)
+            ideal_gas_region = BoundingBox(1., 1e7, 0., 25000.)
+            ideal_gas = BoundedEOS(ideal_gas_eos, ideal_gas_region)
+
             fallback_eos = ConstantEOS(1.)
 
             Dict(
@@ -576,6 +587,7 @@ function save_functional_eoses!()
                  "iapws_highprestemp" => iapws_highprestemp,
                  "iapws_pastfrench" => iapws_pastfrench,
                  "mgd_iceVII" => bounded_mgd_bme,
+                 "ideal_gas" => ideal_gas,
                  "fallback" => fallback_eos)
         end
         write(file, "misc", misc)
