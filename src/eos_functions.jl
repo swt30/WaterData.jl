@@ -28,11 +28,12 @@ abstract InverseFunctionalEOS <: FunctionalEOS
 
 # Specific EOSes
 
-"The ideal gas equation of state"
+"The ideal gas equation of state, where R is the specific gas constant"
 immutable IdealGas <: FunctionalEOS
     R::Float64
 end
 
+"Equation of state for a constant-density substance"
 immutable ConstantEOS <: FunctionalEOS
     ρ::Float64
 end
@@ -576,6 +577,7 @@ function save_functional_eoses!()
 
             # ideal gas for low-pressure region
             ideal_gas_eos = IdealGas(R_h2o)
+            # 1 Pa to 100 bar (10^7 Pa)
             ideal_gas_region = BoundingBox(1., 1e7, 0., 25000.)
             ideal_gas = BoundedEOS(ideal_gas_eos, ideal_gas_region)
 

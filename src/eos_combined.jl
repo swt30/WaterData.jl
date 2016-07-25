@@ -176,7 +176,7 @@ function save_full_eos!()
     tables = load_tabular_eoses()
     piecewise = load_piecewise_eoses()
 
-    # EOSes listed earlier here have priority
+    # In case of overlapping domains, EOSes listed earlier here have priority
     eos = WaterData.StitchedEOS(tables["iapws"],
                                 tables["sugimura"],
                                 tables["french"],
@@ -219,8 +219,10 @@ function save_full_eos!()
         next!(meter)
     end
 
-    # We throw away values less than zero, as we don't expect this behaviour
-    # (except perhaps for low-pressure ices which have negative expansivity)
+    # We throw away values less than zero, as we don't physically expect this
+    # behaviour (except perhaps for low-pressure ices which have negative
+    # expansivity, but these aren't in the region of phase space we're
+    # interested in)
     clamp!(αs, 0, Inf)
 
     # make EOSes and write to file

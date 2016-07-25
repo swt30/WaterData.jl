@@ -1,4 +1,4 @@
-# Equation of state types
+# Generic equation of state types
 
 export EOS, istempdependent
 
@@ -25,5 +25,6 @@ Base.in(xy, eos::EOS) = in(xy..., eos)
 "Does a given EOS have a temperature dependent component?"
 function istempdependent(eos::EOS)
     # by default, this throws an error - later types should override
+    # in future versions of Julia, this might be easier to implement as a trait
     throw(NotImplementedError())
 end
