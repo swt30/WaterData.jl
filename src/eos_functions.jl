@@ -25,6 +25,19 @@ abstract FunctionalEOS <: EOS
 "An EOS which calculates ρ by numerically inverting a function P = P(ρ[, T])"
 abstract InverseFunctionalEOS <: FunctionalEOS
 
+# FIXME: this is a workaround for julia issue #14919
+"Declare that an EOS type is numerically inverted when called"
+macro inverseEOS(theType)
+    return quote
+        function Base.call(eos::$(esc(theType)), P)
+            fzero(ρ -> pressure(eos, ρ) - P, ρmin(eos), ρmax(eos))
+        end
+
+        function Base.call(eos::$(esc(theType)), P, T)
+            fzero(ρ -> pressure(eos, ρ, T) - P, ρmin(eos), ρmax(eos))
+        end
+    end
+end
 
 # Specific EOSes
 
@@ -73,6 +86,7 @@ immutable BME3 <: BME
     ρmin::Float64
     ρmax::Float64
 end
+@inverseEOS BME3
 BME3(ρ₀, K₀, dK₀) = BME3(ρ₀, K₀, dK₀, inversion_ρ_range...)
 BME(ρ₀, K₀, dK₀) = BME3(ρ₀, K₀, dK₀)
 
@@ -87,6 +101,7 @@ immutable BME4 <: BME
 end
 BME4(ρ₀, K₀, dK₀, d2K₀) = BME4(ρ₀, K₀, dK₀, d2K₀, inversion_ρ_range...)
 BME(ρ₀, K₀, dK₀, d2K₀) = BME4(ρ₀, K₀, dK₀, d2K₀)
+@inverseEOS BME4
 
 "The Vinet EOS"
 immutable Vinet <: InverseFunctionalEOS
@@ -97,6 +112,7 @@ immutable Vinet <: InverseFunctionalEOS
     ρmax::Float64
 end
 Vinet(ρ₀, K₀, dK₀) = Vinet(ρ₀, K₀, dK₀, inversion_ρ_range...)
+@inverseEOS Vinet
 
 "The Thomas-Fermi-Dirac EOS"
 immutable TFD <: FunctionalEOS
@@ -117,6 +133,7 @@ end
 function TFD(Z::Integer, A)
     TFD(Int[Z], [A])
 end
+@inverseEOS TFD
 
 "The IAPWS EOS, functional formulation"
 immutable IAPWS <: InverseFunctionalEOS
@@ -167,7 +184,7 @@ immutable MGDPressureEOS <: InverseFunctionalEOS
     q::Int
     n::Int
 end
-
+@inverseEOS MGDPressureEOS
 
 # Helper functions for EOS evaluation
 
@@ -444,14 +461,6 @@ function Base.call(cg::ChoukrounGrasset, P, T)
     density = 1./specificvolume(cg, P, T)
 end
 
-function Base.call(eos::InverseFunctionalEOS, P)
-    fzero(ρ -> pressure(eos, ρ) - P, ρmin(eos), ρmax(eos))
-end
-
-function Base.call(eos::InverseFunctionalEOS, P, T)
-    fzero(ρ -> pressure(eos, ρ, T) - P, ρmin(eos), ρmax(eos))
-end
-
 Base.call(eos::ConstantEOS, P, T) = eos.ρ
 Base.call(eos::IdealGas, P, T) = P / (eos.R * T)
 
@@ -512,31 +521,31 @@ function save_functional_eoses!()
             regionVI = phaseregions["VI"]
 
             Dict(
-                 "I" => BoundedEOS(ChoukrounGrasset(cgtable[:ice_I]...), regionI),
-                 "III" => BoundedEOS(ChoukrounGrasset(cgtable[:ice_III]...), regionIII),
-                 "V" => BoundedEOS(ChoukrounGrasset(cgtable[:ice_V]...), regionV),
-                 "VI" => BoundedEOS(ChoukrounGrasset(cgtable[:ice_VI]...), regionVI))
+                "I" => BoundedEOS(ChoukrounGrasset(cgtable[:ice_I]...), regionI),
+                "III" => BoundedEOS(ChoukrounGrasset(cgtable[:ice_III]...), regionIII),
+                "V" => BoundedEOS(ChoukrounGrasset(cgtable[:ice_V]...), regionV),
+                "VI" => BoundedEOS(ChoukrounGrasset(cgtable[:ice_VI]...), regionVI))
         end
         write(file, "choukroungrasset", ckg)
 
         # Polytropic EOS
         pt = Dict(
-                  "mgsio3" => PolytropicEOS(4100., 0.00161, 0.541),
-                  "fe" => PolytropicEOS(8300., 0.00349, 0.528),
-                  "h2o" => PolytropicEOS(1460., 0.00311, 0.513),
-                  "graphite" => PolytropicEOS(2250., 0.00350, 0.514),
-                  "sic" => PolytropicEOS(3220., 0.00172, 0.537))
+            "mgsio3" => PolytropicEOS(4100., 0.00161, 0.541),
+            "fe" => PolytropicEOS(8300., 0.00349, 0.528),
+            "h2o" => PolytropicEOS(1460., 0.00311, 0.513),
+            "graphite" => PolytropicEOS(2250., 0.00350, 0.514),
+            "sic" => PolytropicEOS(3220., 0.00172, 0.537))
         write(file, "polytropic", pt)
 
         # Seager's EOS
         sg = Dict(
-                  "fe_eps" =>   Vinet(8.30e3, 156.2e9, 6.08),
-                  "h2o" =>        BME(1.46e3, 23.7e9,  4.15),
-                  "mgsio3_pv" =>  BME4(4.10e3, 247.0e9, 3.97, -0.016e-9, 3e3, 6e4),
-                  "fe_tfd" =>     TFD(26, 55.845),
-                  "h2o_tfd" =>    TFD([1, 8], [1.00794, 15.9994], [2., 1.]),
-                  "mgsio3_tfd" => TFD([12, 14, 8], [24.305, 28.0855, 15.9994],
-                                      [1., 1., 3.]))
+            "fe_eps" =>   Vinet(8.30e3, 156.2e9, 6.08),
+            "h2o" =>        BME(1.46e3, 23.7e9,  4.15),
+            "mgsio3_pv" =>  BME4(4.10e3, 247.0e9, 3.97, -0.016e-9, 3e3, 6e4),
+            "fe_tfd" =>     TFD(26, 55.845),
+            "h2o_tfd" =>    TFD([1, 8], [1.00794, 15.9994], [2., 1.]),
+            "mgsio3_tfd" => TFD([12, 14, 8], [24.305, 28.0855, 15.9994],
+                                [1., 1., 3.]))
         write(file, "seager", sg)
 
         # Miscellaneous
@@ -584,13 +593,13 @@ function save_functional_eoses!()
             fallback_eos = ConstantEOS(1.)
 
             Dict(
-                 "iapws_hightemp" => iapws_hightemp,
-                 "iapws_highpressure" => iapws_highpressure,
-                 "iapws_highprestemp" => iapws_highprestemp,
-                 "iapws_pastfrench" => iapws_pastfrench,
-                 "mgd_iceVII" => bounded_mgd_bme,
-                 "ideal_gas" => ideal_gas,
-                 "fallback" => fallback_eos)
+                "iapws_hightemp" => iapws_hightemp,
+                "iapws_highpressure" => iapws_highpressure,
+                "iapws_highprestemp" => iapws_highprestemp,
+                "iapws_pastfrench" => iapws_pastfrench,
+                "mgd_iceVII" => bounded_mgd_bme,
+                "ideal_gas" => ideal_gas,
+                "fallback" => fallback_eos)
         end
         write(file, "misc", misc)
     end
