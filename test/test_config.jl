@@ -1,7 +1,12 @@
-using FactCheck
+if VERSION >= v"0.5"
+    using Base.Test
+else
+    using BaseTestNext
+end
+
 import WaterData
 
 
-facts("No config tests necessary") do
+@testset "No config tests necessary" begin
     nothing
 end

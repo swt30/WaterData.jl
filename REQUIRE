@@ -16,6 +16,3 @@ Roots
 
 # So we have something to look at during long operations
 ProgressMeter
-
-# Testing
-FactCheck

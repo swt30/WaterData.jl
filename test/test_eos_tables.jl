@@ -1,71 +1,76 @@
-using FactCheck
+if VERSION >= v"0.5"
+    using Base.Test
+else
+    using BaseTestNext
+end
+
 import WaterData
 import WaterData.testhelpers: between
 
 
 # Tests on tables.jl
 
-facts("Tabular equations of state") do
+@testset "Tabular equations of state" begin
     # make some basic EOS grids
     gridtable = WaterData.GridEOS([1.,2,3], [1.,2,3], [1. 1 1; 1 1 1; 1 1 1])
     nongridtable = WaterData.UnstructuredEOS([1.,2,2,3], [1.,1,2,2], [1.,2,2,3])
     linetable = WaterData.LineEOS([1., 2, 3], [5., 7, 8])
 
-    context("Checking if a point is in a table") do
-        @fact in(2, 2, gridtable) --> true
-        @fact in(2, 2, WaterData.BoundingBox(gridtable)) --> true
-        @fact in(3, 0.5, gridtable) --> false
-        @fact in(3, 0.5, WaterData.BoundingBox(gridtable)) --> false
-        @fact in(2, 1.5, nongridtable) --> true
-        @fact in(2.1, 1.9, nongridtable) --> true
-        @fact in(1.9, 1.1, nongridtable) --> true
-        @fact in(3, 4, nongridtable) --> false  # outside the bounding box
-        @fact in(1.1, 1.9, WaterData.BoundingBox(nongridtable)) --> true
-        @fact in(1.1, 1.9, nongridtable) --> false # inside the BB but outside the EOS
+    @testset "Checking if a point is in a table" begin
+        @test in(2, 2, gridtable)
+        @test in(2, 2, WaterData.BoundingBox(gridtable))
+        @test !in(3, 0.5, gridtable)
+        @test !in(3, 0.5, WaterData.BoundingBox(gridtable))
+        @test in(2, 1.5, nongridtable)
+        @test in(2.1, 1.9, nongridtable)
+        @test in(1.9, 1.1, nongridtable)
+        @test !in(3, 4, nongridtable)  # outside the bounding box
+        @test in(1.1, 1.9, WaterData.BoundingBox(nongridtable))
+        @test !in(1.1, 1.9, nongridtable) # inside the BB but outside the EOS
     end
 
-    context("Log-normalisation based on the range of an entire table") do
+    @testset "Log-normalisation based on the range of an entire table" begin
         xn, yn = WaterData.lognorm12(2.5, 1.5, gridtable)
-        @fact xn --> between(1, 2)
-        @fact yn --> between(1, 2)
+        @test xn |> between(1, 2)
+        @test yn |> between(1, 2)
         P, T = WaterData.unlognorm(xn, yn, gridtable)
-        @fact P --> roughly(2.5)
-        @fact T --> roughly(1.5)
+        @test P ≈ 2.5
+        @test T ≈ 1.5
 
         xn, yn = WaterData.lognorm12(2.5, 1.5, nongridtable)
-        @fact xn --> between(1, 2)
-        @fact yn --> between(1, 2)
+        @test xn |> between(1, 2)
+        @test yn |> between(1, 2)
         P, T = WaterData.unlognorm(xn, yn, nongridtable)
-        @fact P --> roughly(2.5)
-        @fact T --> roughly(1.5)
+        @test P ≈ 2.5
+        @test T ≈ 1.5
     end
 
-    context("Linear interpolation on unstructured data") do
+    @testset "Linear interpolation on unstructured data" begin
         # interpolating in the region of interest gives appropriate values
-        @fact WaterData.lininterp(nongridtable, 1.9, 1.1) --> between(1, 2)
-        @fact WaterData.lininterp(nongridtable, 2.1, 1.9) --> between(2, 3)
+        @test WaterData.lininterp(nongridtable, 1.9, 1.1) |> between(1, 2)
+        @test WaterData.lininterp(nongridtable, 2.1, 1.9) |> between(2, 3)
         # interpolating outside the bounding box gives NaN
-        @fact WaterData.lininterp(nongridtable, 0.1, 0.2) --> isnan
-        @fact WaterData.lininterp(nongridtable, 4, 5) --> isnan
+        @test WaterData.lininterp(nongridtable, 0.1, 0.2) |> isnan
+        @test WaterData.lininterp(nongridtable, 4, 5) |> isnan
         # interpolating outside the tessellation but within the BB gives NaN
-        @fact WaterData.lininterp(nongridtable, 1.1, 1.9) --> isnan
-        @fact WaterData.lininterp(nongridtable, 2.9, 1.1) --> isnan
+        @test WaterData.lininterp(nongridtable, 1.1, 1.9) |> isnan
+        @test WaterData.lininterp(nongridtable, 2.9, 1.1) |> isnan
     end
 
-    context("Linear interpolation of 1-D data") do
-        @fact linetable(1) --> 5
-        @fact linetable(1.5) --> 6
-        @fact linetable(2) --> 7
-        @fact linetable(2.5) --> 7.5
-        @fact linetable(3) --> 8
-        @fact linetable(-9) --> 5  # clips at start
-        @fact linetable(28) --> 8  # clips at end
+    @testset "Linear interpolation of 1-D data" begin
+        @test linetable(1) == 5
+        @test linetable(1.5) == 6
+        @test linetable(2) == 7
+        @test linetable(2.5) == 7.5
+        @test linetable(3) == 8
+        @test linetable(-9) == 5  # clips at start
+        @test linetable(28) == 8  # clips at end
     end
 
-    context("Checking tagging of temperature dependence") do
-        @fact WaterData.istempdependent(gridtable) --> true
-        @fact WaterData.istempdependent(linetable) --> false
-        @fact WaterData.istempdependent(nongridtable) --> true
+    @testset "Checking tagging of temperature dependence" begin
+        @test WaterData.istempdependent(gridtable)
+        @test !WaterData.istempdependent(linetable)
+        @test WaterData.istempdependent(nongridtable)
     end
 
 end

@@ -1,15 +1,13 @@
 # Helper functions used in test routines
 
 
-"Test helper functions and FactCheck extensions"
+"Test helper functions"
 module testhelpers
-
-using FactCheck  # for testing
 
 "Closure to check if something is between `a` and `b`"
 function between(a, b)
     @assert a < b
-    x -> greater_than(a)(x) && less_than(b)(x)
+    x -> a < x < b
 end
 
 "Placeholder function so that we can test that something doesn't error"

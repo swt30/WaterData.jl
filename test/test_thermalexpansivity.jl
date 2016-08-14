@@ -1,4 +1,9 @@
-using FactCheck
+if VERSION >= v"0.5"
+    using Base.Test
+else
+    using BaseTestNext
+end
+
 import WaterData
 
 
@@ -21,21 +26,21 @@ end # module test_thermalexpansivity_resources
 res = test_thermalexpansivity_resources
 
 
-facts("Thermal expansivity") do
+@testset "Thermal expansivity" begin
     e1 = res.SimpleEOS(1, 1)
     e2 = res.SimpleEOS(2, 3)
 
-    context("Get gradient of an EOS") do
-        @fact WaterData.gradientlog(e1, 1., 1.) --> roughly([1/1, 1/1])
-        @fact WaterData.gradientlog(e1, 4., 1.) --> roughly([1/4, 1/1])
-        @fact WaterData.gradientlog(e2, 1., 1.) --> roughly([2/1, 3/1])
-        @fact WaterData.gradientlog(e2, 4., 2.) --> roughly([2/4, 3/2])
+    @testset "Get gradient of an EOS" begin
+        @test WaterData.gradientlog(e1, 1., 1.) ≈ [1/1, 1/1]
+        @test WaterData.gradientlog(e1, 4., 1.) ≈ [1/4, 1/1]
+        @test WaterData.gradientlog(e2, 1., 1.) ≈ [2/1, 3/1]
+        @test WaterData.gradientlog(e2, 4., 2.) ≈ [2/4, 3/2]
     end
 
-    context("Get directional derivative of an EOS") do
-        @fact WaterData.partiallnT(e1, 1., 1.) --> roughly(1/1)
-        @fact WaterData.partiallnT(e1, 4., 1.) --> roughly(1/1)
-        @fact WaterData.partiallnT(e2, 1., 1.) --> roughly(3/1)
-        @fact WaterData.partiallnT(e2, 4., 2.) --> roughly(3/2)
+    @testset "Get directional derivative of an EOS" begin
+        @test WaterData.partiallnT(e1, 1., 1.) ≈ 1/1
+        @test WaterData.partiallnT(e1, 4., 1.) ≈ 1/1
+        @test WaterData.partiallnT(e2, 1., 1.) ≈ 3/1
+        @test WaterData.partiallnT(e2, 4., 2.) ≈ 3/2
     end
 end

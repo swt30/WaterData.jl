@@ -1,4 +1,9 @@
-using FactCheck
+if VERSION >= v"0.5"
+    using Base.Test
+else
+    using BaseTestNext
+end
+
 import WaterData
 
 
@@ -24,12 +29,12 @@ Base.call(e::TestEOS2D, P::Real, T::Real) = (P+T)^(e.power) + (e.add)
 end # module resources
 
 
-# tests
+# test
 
-facts("Combined EOS") do
+@testset "Combined EOS" begin
     res = test_eos_combined_resources
 
-    context("1D piecewise EOS") do
+    @testset "1D piecewise EOS" begin
         # three different versions
         identity = res.TestEOS1D(1)
         squared = res.TestEOS1D(2)
@@ -39,24 +44,24 @@ facts("Combined EOS") do
         eos = WaterData.PressurePiecewiseEOS(
             [identity, squared, cubed], [4, 7, 9, 11])
 
-        context("Get correct EOS from the piecewise EOS") do
+        @testset "Get correct EOS from the piecewise EOS" begin
             OutOfDomain = WaterData.OutOfDomainEOS
 
-            @fact typeof(WaterData.extracteos(eos, 2)) --> OutOfDomain
-            @fact typeof(WaterData.extracteos(eos, 5)) --> res.TestEOS1D
-            @fact typeof(WaterData.extracteos(eos, 12)) --> OutOfDomain
+            @test typeof(WaterData.extracteos(eos, 2)) == OutOfDomain
+            @test typeof(WaterData.extracteos(eos, 5)) == res.TestEOS1D
+            @test typeof(WaterData.extracteos(eos, 12)) == OutOfDomain
         end
 
-        context("Evaluate the piecewise EOS to the correct values") do
-            @fact_throws DomainError eos(2)
-            @fact_throws DomainError eos(14)
-            @fact eos(5) --> 5
-            @fact eos(8) --> 8^2
-            @fact eos(10) --> 10^3
+        @testset "Evaluate the piecewise EOS to the correct values" begin
+            @test_throws DomainError eos(2)
+            @test_throws DomainError eos(14)
+            @test eos(5) == 5
+            @test eos(8) == 8^2
+            @test eos(10) == 10^3
         end
     end
 
-    context("2D stitched EOS") do
+    @testset "2D stitched EOS" begin
         # three diferent versions
         identity = res.TestEOS2D(1, 0)
         sqr1 = res.TestEOS2D(2, 1)
@@ -75,21 +80,21 @@ facts("Combined EOS") do
         # stitch together
         eos = WaterData.StitchedEOS([e1, e2, e3])
 
-        context("Values outside the domain are errors") do
-            @fact_throws DomainError eos(-3, -7)
-            @fact_throws DomainError eos(11, 12)
+        @testset "Values outside the domain are errors" begin
+            @test_throws DomainError eos(-3, -7)
+            @test_throws DomainError eos(11, 12)
         end
 
-        context("Correct values within the domain") do
-            @fact eos(2, 2) --> (2+2)^1 + 0  # first EOS
-            @fact eos(2, 8) --> (2+8)^2 + 1  # second EOS
-            @fact eos(8, 8) --> (8+8)^3 + 2  # third EOS
+        @testset "Correct values within the domain" begin
+            @test eos(2, 2) == (2+2)^1 + 0  # first EOS
+            @test eos(2, 8) == (2+8)^2 + 1  # second EOS
+            @test eos(8, 8) == (8+8)^3 + 2  # third EOS
         end
 
-        context("Correct priority for overlapping EOS") do
-            @fact eos(4, 4) --> (4+4)^1 + 0  # first EOS only
-            @fact eos(4, 8) --> (4+8)^2 + 1  # second EOS only
-            @fact eos(2, 8) --> (2+8)^2 + 1  # ditto
+        @testset "Correct priority for overlapping EOS" begin
+            @test eos(4, 4) == (4+4)^1 + 0  # first EOS only
+            @test eos(4, 8) == (4+8)^2 + 1  # second EOS only
+            @test eos(2, 8) == (2+8)^2 + 1  # ditto
         end
     end
 end

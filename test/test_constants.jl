@@ -1,7 +1,11 @@
-using FactCheck
+if VERSION >= v"0.5"
+    using Base.Test
+else
+    using BaseTestNext
+end
+
 import WaterData
 
-
-facts("Constant verification") do
-    @fact WaterData.R_h2o --> roughly(WaterData.R / WaterData.h2o_molar_mass, rtol=0.01)
+@testset "Constant verification" begin
+    @test isapprox(WaterData.R_h2o, WaterData.R / WaterData.h2o_molar_mass, rtol=0.01)
 end

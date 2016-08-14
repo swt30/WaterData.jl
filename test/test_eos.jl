@@ -1,4 +1,9 @@
-using FactCheck
+if VERSION >= v"0.5"
+  using Base.Test
+else
+  using BaseTestNext
+end
+
 import WaterData
 
 module test_eos_resources
@@ -10,9 +15,9 @@ notempinfo = NoTempInfo()
 end
 
 
-facts("EOS base tests") do
+@testset "EOS base tests" begin
     res = test_eos_resources
-    context("Tagging whether an EOS is temperature dependent") do
-        @fact_throws WaterData.istempdependent(res.notempinfo)
+    @testset "Tagging whether an EOS is temperature dependent" begin
+        @test_throws WaterData.NotImplementedError WaterData.istempdependent(res.notempinfo)
     end
 end

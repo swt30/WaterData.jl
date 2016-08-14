@@ -1,46 +1,51 @@
-using FactCheck
+if VERSION >= v"0.5"
+    using Base.Test
+else
+    using BaseTestNext
+end
+
 import WaterData
 
 include("$(WaterData.config.testdata)/function_testvalues.jl")
 res = function_testvalues
 
 
-facts("Functional equations of state") do
-    context("TFD") do
+@testset "Functional equations of state" begin
+    @testset "TFD" begin
         # our sample pressures
         pressures = [0.1e6, 1e6, 10e6] # in bar
         pressures .*= 1e5              # 1 bar = 1e5 Pa
 
         function test_TFD(A, Z, n, anticipated_densities)
             TFD = WaterData.TFD(Z, A, n)
-            @fact map(TFD, pressures) --> roughly(anticipated_densities, rtol=0.01)
+            @test isapprox(map(TFD, pressures), anticipated_densities, rtol=0.01)
         end
 
         function test_TFD(A, Z, anticipated_densities)
             TFD = WaterData.TFD(Z, A)
-            @fact map(TFD, pressures) --> roughly(anticipated_densities, rtol=0.01)
+            @test isapprox(map(TFD, pressures), anticipated_densities, rtol=0.01)
         end
 
-        context("with a single element") do
-            context("Fe") do
+        @testset "with a single element" begin
+            @testset "Fe" begin
                 test_TFD(55.845, 26, [5900, 8130, 15400])
             end
-            context("Bi") do
+            @testset "Bi" begin
                 test_TFD(208.98, 83, [21800, 26200, 41000])
             end
         end
 
-        context("with multiple elements") do
-            context("TiO2") do
+        @testset "with multiple elements" begin
+            @testset "TiO2" begin
                 test_TFD([47.867, 15.9994], [22, 8], [1., 2.], [3190, 4920, 10400])
             end
-            context("PbS") do
+            @testset "PbS" begin
                 test_TFD([207.2, 32.065], [82, 16], [12800, 17000, 29600])
             end
         end
     end
 
-    context("Vinet") do
+    @testset "Vinet" begin
         p = res.vinetpars
         vinet = WaterData.Vinet(p[:ρ₀], p[:K₀], p[:dK₀])
         vinetsamples = res.vinetdata
@@ -48,12 +53,12 @@ facts("Functional equations of state") do
         ρs = vinetsamples[:, 2]
 
         for (P, ρ) in zip(Ps, ρs)
-            @fact log(vinet(P)) --> roughly(log(ρ), rtol=0.01)
+            @test isapprox(log(vinet(P)), log(ρ), rtol=0.01)
         end
-        @fact WaterData.istempdependent(vinet) --> false
+        @test !WaterData.istempdependent(vinet)
     end
 
-    context("BME3") do
+    @testset "BME3" begin
         p = res.bme3pars
         bme3 = WaterData.BME3(p[:ρ₀], p[:K₀], p[:dK₀])
         bme3samples = res.bme3data
@@ -61,12 +66,12 @@ facts("Functional equations of state") do
         ρs = bme3samples[:, 2]
 
         for (P, ρ) in zip(Ps, ρs)
-            @fact log(bme3(P)) --> roughly(log(ρ), rtol=0.01)
+            @test isapprox(log(bme3(P)), log(ρ), rtol=0.01)
         end
-        @fact WaterData.istempdependent(bme3) --> false
+        @test !WaterData.istempdependent(bme3)
     end
 
-    context("BME4") do
+    @testset "BME4" begin
         inv_range = [4000., 60000.]
         p = res.bme4pars
         bme4 = WaterData.BME4(p[:ρ₀], p[:K₀], p[:dK₀], p[:d2K₀], inv_range...)
@@ -75,12 +80,12 @@ facts("Functional equations of state") do
         ρs = bme4samples[:, 2]
 
         for (P, ρ) in zip(Ps, ρs)
-            @fact log(bme4(P)) --> roughly(log(ρ), rtol=0.01)
+            @test isapprox(log(bme4(P)), log(ρ), rtol=0.01)
         end
-        @fact WaterData.istempdependent(bme4) --> false
+        @test !WaterData.istempdependent(bme4)
     end
 
-    context("MGD thermal expansivity") do
+    @testset "MGD thermal expansivity" begin
         p = res.mgdpars
         ice_density(molar_volume) = WaterData.h2o_molar_mass / molar_volume
         ρ₀ = ice_density(p[:V₀])
@@ -94,13 +99,13 @@ facts("Functional equations of state") do
             ρs = map(ice_density, Vs)    # kg / m3
 
             for (P, ρ) in zip(Ps, ρs)
-                @fact log(mgd(P, T)) --> roughly(log(ρ), rtol=0.01)
+                @test isapprox(log(mgd(P, T)), log(ρ), rtol=0.01)
             end
-            @fact WaterData.istempdependent(mgd) --> true
+            @test WaterData.istempdependent(mgd)
         end
     end
 
-    context("Choukroun-Grasset low-temperature ice") do
+    @testset "Choukroun-Grasset low-temperature ice" begin
         cgpars = WaterData
         Ps = res.cgdata[:, 1] * 1e6  # MPa -> Pa
         Vs = res.cgdata[:, 2] / 1e3  # cm3 /g -> m3 /kg
@@ -117,31 +122,31 @@ facts("Functional equations of state") do
         cgV = WaterData.ChoukrounGrasset(cgVp...)
         cgVI = WaterData.ChoukrounGrasset(cgVIp...)
 
-        @fact cgI(Ps[1], Ts[1]) --> roughly(ρs[1], rtol=0.01)
-        @fact map(cgIII, Ps[2:3], Ts[2:3]) --> roughly(ρs[2:3], rtol=0.01)
-        @fact map(cgV, Ps[4:5], Ts[4:5]) --> roughly(ρs[4:5], rtol=0.01)
-        @fact cgVI(Ps[6], Ts[6]) --> roughly(ρs[6], rtol=0.01)
-        @fact WaterData.istempdependent(cgI) --> true
-        @fact WaterData.istempdependent(cgIII) --> true
-        @fact WaterData.istempdependent(cgV) --> true
-        @fact WaterData.istempdependent(cgVI) --> true
+        @test isapprox(cgI(Ps[1], Ts[1]), ρs[1], rtol=0.01)
+        @test isapprox(map(cgIII, Ps[2:3], Ts[2:3]), ρs[2:3], rtol=0.01)
+        @test isapprox(map(cgV, Ps[4:5], Ts[4:5]), ρs[4:5], rtol=0.01)
+        @test isapprox(cgVI(Ps[6], Ts[6]), ρs[6], rtol=0.01)
+        @test WaterData.istempdependent(cgI)
+        @test WaterData.istempdependent(cgIII)
+        @test WaterData.istempdependent(cgV)
+        @test WaterData.istempdependent(cgVI)
     end
 
-    context("EOS inversion") do
-        context("Round-trip upon inversion gives the same values") do
+    @testset "EOS inversion" begin
+        @testset "Round-trip upon inversion gives the same values" begin
             # the Vinet is a function that works by inversion
             f_fe = WaterData.Vinet(8.30e3, 156.2e9, 6.08)  # BME for iron
             ρ_fe = 10000
             P_fe = WaterData.pressure(f_fe, ρ_fe)
-            @fact f_fe(P_fe) --> roughly(ρ_fe)
-            @fact WaterData.istempdependent(f_fe) --> false
+            @test f_fe(P_fe) ≈ ρ_fe
+            @test !WaterData.istempdependent(f_fe)
 
             # so does the BME
             f_h2o = WaterData.BME(1.46e3, 23.7e9,  4.15)  # BME for ice VII
             ρ_h2o = 5000
             P_h2o = WaterData.pressure(f_h2o, ρ_h2o)
-            @fact f_h2o(P_h2o) --> roughly(ρ_h2o)
-            @fact WaterData.istempdependent(f_h2o) --> false
+            @test f_h2o(P_h2o) ≈ ρ_h2o
+            @test !WaterData.istempdependent(f_h2o)
         end
     end
 end
