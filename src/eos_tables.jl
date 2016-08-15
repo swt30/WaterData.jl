@@ -211,7 +211,7 @@ function slice(eos::GridEOS, T)
     LineEOS(Ps, ρs)
 end
 
-Base.call(eos::UnstructuredEOS, P, T) = lininterp(eos, P, T)
-Base.call(eos::GridEOS, P, T) = evaluate(eos.spline, P, T)
-Base.call(eos::LineEOS, P) = evaluate(eos.spline, P)
-Base.call(eos::LineEOS, P, T) = evaluate(eos.spline, P)
+(eos::UnstructuredEOS)(P, T) = lininterp(eos, P, T)
+(eos::GridEOS)(P, T) = evaluate(eos.spline, P, T)
+(eos::LineEOS)(P) = evaluate(eos.spline, P)
+(eos::LineEOS)(P, T) = evaluate(eos.spline, P)

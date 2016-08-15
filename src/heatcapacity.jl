@@ -58,12 +58,12 @@ end
 
 # Evaluating heat capacities
 
-Base.call(cp::GridHeatCapacity, P, T) = evaluate(cp.spline, P, T)
-Base.call(cp::ConstantHeatCapacity, P) = cp.value
-Base.call(cp::ConstantHeatCapacity, P, T) = cp.value
-Base.call(cp::TFuncHeatCapacity, T) = cp.func(T)
-Base.call(cp::TFuncHeatCapacity, P, T) = cp.func(T)
-Base.call(cp::PTFuncHeatCapacity, P, T) = cp.func(P, T)
+(cp::GridHeatCapacity)(P, T) = evaluate(cp.spline, P, T)
+(cp::ConstantHeatCapacity)(P) = cp.value
+(cp::ConstantHeatCapacity)(P, T) = cp.value
+(cp::TFuncHeatCapacity)(T) = cp.func(T)
+(cp::TFuncHeatCapacity)(P, T) = cp.func(T)
+(cp::PTFuncHeatCapacity)(P, T) = cp.func(P, T)
 
 
 # Make and save heat capacity

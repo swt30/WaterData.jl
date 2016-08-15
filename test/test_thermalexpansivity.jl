@@ -14,7 +14,7 @@ type SimpleEOS <: WaterData.EOS
     n::Int
     m::Int
 end
-Base.call(e::SimpleEOS, P, T) = P^(e.n) * T^(e.m)
+(e::SimpleEOS)(P, T) = P^(e.n) * T^(e.m)
 
 end # module test_thermalexpansivity_resources
 

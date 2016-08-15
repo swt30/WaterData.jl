@@ -26,8 +26,8 @@ end
 
 """Describes the T/P extent and shape parameters of a phase boundary"""
 immutable PhaseBoundaryPars
-    phase1::ASCIIString
-    phase2::ASCIIString
+    phase1::String
+    phase2::String
     Tmin::Float64
     Tmax::Float64
     Pmin::Float64

@@ -9,7 +9,7 @@ export PressurePiecewiseEOS, StitchedEOS
 # This EOS is used for signalling we're outside the domain
 
 immutable OutOfDomainEOS <: EOS; end
-Base.call(::OutOfDomainEOS, args...) = throw(DomainError())
+(::OutOfDomainEOS)(args...) = throw(DomainError())
 
 
 # Piecewise one-dimensional EOS
@@ -60,7 +60,7 @@ end
 extracteos(eos::EOS, args...) = eos  # fallback for when it's not piecewise
 
 # calling a PressurePiecewiseEOS just evaluates the appropriate EOS
-Base.call(eos::PressurePiecewiseEOS, P) = extracteos(eos, P)(P)
+(eos::PressurePiecewiseEOS)(P) = extracteos(eos, P)(P)
 
 
 """ Save piecewise EOSes to `eos-piecewise.jld`:
@@ -160,7 +160,7 @@ function extracteos(s::StitchedEOS, P, T)
 end
 
 # calling a PressurePiecewiseEOS just evaluates the appropriate EOS
-Base.call(s::StitchedEOS, P, T) = extracteos(s, P, T)(P, T)
+(s::StitchedEOS)(P, T) = extracteos(s, P, T)(P, T)
 
 
 # Full EOS generation

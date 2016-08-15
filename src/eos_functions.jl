@@ -29,11 +29,11 @@ abstract InverseFunctionalEOS <: FunctionalEOS
 "Declare that an EOS type is numerically inverted when called"
 macro inverseEOS(theType)
     return quote
-        function Base.call(eos::$(esc(theType)), P)
+        function (eos::$(esc(theType)))(P)
             fzero(ρ -> pressure(eos, ρ) - P, ρmin(eos), ρmax(eos))
         end
 
-        function Base.call(eos::$(esc(theType)), P, T)
+        function (eos::$(esc(theType)))(P, T)
             fzero(ρ -> pressure(eos, ρ, T) - P, ρmin(eos), ρmax(eos))
         end
     end
@@ -422,7 +422,7 @@ end
 pressure(beos::BoundedEOS, ρ) = pressure(beos.eos, ρ)
 pressure(beos::BoundedEOS, ρ, T) = pressure(beos.eos, ρ, T)
 
-function Base.call(eos::TFD, P)
+function (eos::TFD)(P)
     let Z = eos.Z, A = eos.A, n = eos.n
         # P is in Pa but we want it in dyn/cm^2: 1 Pa = 10 dyn/cm^2
         P *= 10
@@ -454,15 +454,15 @@ function Base.call(eos::TFD, P)
     end
 end
 
-Base.call(eos::TFD, P, T) = eos(P)
+(eos::TFD)(P, T) = eos(P)
 
-function Base.call(cg::ChoukrounGrasset, P, T)
+function (cg::ChoukrounGrasset)(P, T)
     P = P/1e6  # Pa -> MPa
     density = 1./specificvolume(cg, P, T)
 end
 
-Base.call(eos::ConstantEOS, P, T) = eos.ρ
-Base.call(eos::IdealGas, P, T) = P / (eos.R * T)
+(eos::ConstantEOS)(P, T) = eos.ρ
+(eos::IdealGas)(P, T) = P / (eos.R * T)
 
 "Minimum density of an EOS"
 ρmin(eos::EOS) = eos.ρmin
@@ -471,15 +471,15 @@ Base.call(eos::IdealGas, P, T) = P / (eos.R * T)
 ρmax(eos::EOS) = eos.ρmax
 ρmax(mgd::MGDPressureEOS) = ρmax(mgd.eos)
 
-function Base.call(eos::PolytropicEOS, P)
+function (eos::PolytropicEOS)(P)
     let a = eos.a, ρ₀ = eos.ρ₀, n = eos.n
         return ρ₀ + a*P^n
     end
 end
 
-Base.call(eos::PolytropicEOS, P, T) = eos(P)
-Base.call(beos::BoundedEOS, P) = beos.eos(P)
-Base.call(beos::BoundedEOS, P, T) = beos.eos(P, T)
+(eos::PolytropicEOS)(P, T) = eos(P)
+(beos::BoundedEOS)(P) = beos.eos(P)
+(beos::BoundedEOS)(P, T) = beos.eos(P, T)
 
 
 # Defining the regions within which each function holds

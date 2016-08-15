@@ -12,14 +12,14 @@ import WaterData
 type TestEOS1D <: WaterData.FunctionalEOS
     power::Int
 end
-Base.call(e::TestEOS1D, P::Real) = P^(e.power)
+(e::TestEOS1D)(P::Real) = P^(e.power)
 
 "2D test EOS"
 type TestEOS2D <: WaterData.FunctionalEOS
     power::Int
     add::Int
 end
-Base.call(e::TestEOS2D, P::Real, T::Real) = (P+T)^(e.power) + (e.add)
+(e::TestEOS2D)(P::Real, T::Real) = (P+T)^(e.power) + (e.add)
 
 end # module resources
 
