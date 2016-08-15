@@ -1,8 +1,4 @@
-if VERSION >= v"0.5"
-    using Base.Test
-else
-    using BaseTestNext
-end
+using Base.Test
 
 @testset "WaterData tests" begin
     # make sure our helper functions work

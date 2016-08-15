@@ -1,9 +1,4 @@
-if VERSION >= v"0.5"
-    using Base.Test
-else
-    using BaseTestNext
-end
-
+using Base.Test
 import WaterData
 
 include("$(WaterData.config.testdata)/function_testvalues.jl")

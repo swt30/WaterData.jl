@@ -1,8 +1,5 @@
-if VERSION >= v"0.5"
-    using Base.Test
-else
-    using BaseTestNext
-end
+using Base.Test
+
 
 module test_heatcapacity_resources
 import WaterData

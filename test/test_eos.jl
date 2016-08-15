@@ -1,9 +1,4 @@
-if VERSION >= v"0.5"
-  using Base.Test
-else
-  using BaseTestNext
-end
-
+using Base.Test
 import WaterData
 
 module test_eos_resources
