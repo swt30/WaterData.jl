@@ -13,9 +13,9 @@ const testdata = normpath(joinpath(dirname(@__FILE__), "..", "test", "data"))
 
 # Gridded EOS parameters
 "Grid resolution for making gridded equations of state"
-const grid_resolution = 400
+const grid_resolution = 512
 "Minimum pressure used in constructing the full EOS [Pa]"
-const Pmin = 1e0
+const Pmin = 10
 "Maximum pressure used in constructing the full EOS [Pa]"
 const Pmax = 1e14
 "Minimum temperature used in constructing the full EOS [K]"

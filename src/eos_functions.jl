@@ -133,7 +133,6 @@ end
 function TFD(Z::Integer, A)
     TFD(Int[Z], [A])
 end
-@inverseEOS TFD
 
 "The IAPWS EOS, functional formulation"
 immutable IAPWS <: InverseFunctionalEOS
@@ -165,6 +164,7 @@ function _get_iapwscoeffs()
 
     coeffs
 end
+@inverseEOS IAPWS
 
 
 "Wrapper for indicating that some `EOS` is bounded"
@@ -586,8 +586,7 @@ function save_functional_eoses!()
 
             # ideal gas for low-pressure region
             ideal_gas_eos = IdealGas(R_h2o)
-            # 1 Pa to 100 bar (10^7 Pa)
-            ideal_gas_region = BoundingBox(1., 1e7, 0., 25000.)
+            ideal_gas_region = BoundingBox(0., 1e5, 0., Inf)
             ideal_gas = BoundedEOS(ideal_gas_eos, ideal_gas_region)
 
             fallback_eos = ConstantEOS(1.)

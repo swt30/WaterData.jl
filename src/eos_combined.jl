@@ -176,8 +176,11 @@ function save_full_eos!()
     tables = load_tabular_eoses()
     piecewise = load_piecewise_eoses()
 
+    water_idealgas = funcs["misc"]["ideal_gas"]
+
     # In case of overlapping domains, EOSes listed earlier here have priority
-    eos = WaterData.StitchedEOS(tables["iapws"],
+    eos = WaterData.StitchedEOS(water_idealgas,
+                                tables["iapws"],
                                 tables["sugimura"],
                                 tables["french"],
                                 funcs["choukroungrasset"]["I"],
@@ -191,7 +194,6 @@ function save_full_eos!()
                                 funcs["misc"]["iapws_highpressure"],
                                 funcs["misc"]["iapws_highprestemp"],
                                 funcs["misc"]["iapws_hightemp"],
-                                funcs["misc"]["ideal_gas"],
                                 funcs["misc"]["fallback"])
 
     # set the resolution
