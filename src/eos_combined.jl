@@ -26,7 +26,7 @@ abstract PiecewiseEOS <: EOS
       [0, 2], piecewise from [0, 1] and (1, 2].
 
     Calling the `PressurePiecewiseEOS` will evaluate the correct EOS at a given
-    pressure. For example, if called """
+    pressure. """
 immutable PressurePiecewiseEOS <: PiecewiseEOS
     eoses::Vector{EOS}
     edges::Vector{Float64}
@@ -61,6 +61,7 @@ extracteos(eos::EOS, args...) = eos  # fallback for when it's not piecewise
 
 # calling a PressurePiecewiseEOS just evaluates the appropriate EOS
 (eos::PressurePiecewiseEOS)(P) = extracteos(eos, P)(P)
+(eos::PressurePiecewiseEOS)(P, T) = extracteos(eos, P)(P, T)
 
 
 """ Save piecewise EOSes to `eos-piecewise.jld`:
@@ -170,6 +171,7 @@ end
     * `raw`: the full `StitchedEOS`, consisting of all H2O tabular and
     functional EOSes
     * `grid`: `GridEOS` version of the above (much faster to evaluate)
+    * `gridPlusIdeal`: switches to ideal gas below a certain threshold
     * `thermexp`: the precomputed thermal expansivity for the above """
 function save_full_eos!()
     funcs = load_functional_eoses()
@@ -179,8 +181,7 @@ function save_full_eos!()
     water_idealgas = funcs["misc"]["ideal_gas"]
 
     # In case of overlapping domains, EOSes listed earlier here have priority
-    eos = WaterData.StitchedEOS(water_idealgas,
-                                tables["iapws"],
+    eos = WaterData.StitchedEOS(tables["iapws"],
                                 tables["sugimura"],
                                 tables["french"],
                                 funcs["choukroungrasset"]["I"],
@@ -229,10 +230,12 @@ function save_full_eos!()
 
     # make EOSes and write to file
     grideos = GridEOS(Ps, Ts, ρs)
+    gridPlusIdeal = PressurePiecewiseEOS([water_idealgas, grideos], [0, 100e5, Inf])
     thermexp = GridEOS(Ps, Ts, αs)
     jldopen("$(WaterData.config.datadir)/eos-full.jld", "w") do file
         write(file, "raw", eos)
         write(file, "grid", grideos)
+        write(file, "gridPlusIdeal", gridPlusIdeal)
         write(file, "thermexp", thermexp)
     end
 end
