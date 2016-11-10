@@ -586,7 +586,7 @@ function save_functional_eoses!()
 
             # ideal gas for low-pressure region
             ideal_gas_eos = IdealGas(R_h2o)
-            ideal_gas_region = BoundingBox(0., 1e5, 0., Inf)
+            ideal_gas_region = BoundingBox(0., 1e7, 0., Inf)
             ideal_gas = BoundedEOS(ideal_gas_eos, ideal_gas_region)
 
             fallback_eos = ConstantEOS(1.)

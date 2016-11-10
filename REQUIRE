@@ -1,4 +1,4 @@
-julia 0.5-
+julia 0.5
 
 # Data handling and wrangling
 JLD
@@ -10,6 +10,7 @@ VoronoiDelaunay
 Dierckx
 
 # Derivatives, gradients, numeric root-finding
+ForwardDiff
 Calculus
 Roots
 

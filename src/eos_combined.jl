@@ -7,7 +7,6 @@ export PressurePiecewiseEOS, StitchedEOS
 
 
 # This EOS is used for signalling we're outside the domain
-
 immutable OutOfDomainEOS <: EOS; end
 (::OutOfDomainEOS)(args...) = throw(DomainError())
 
@@ -229,7 +228,9 @@ function save_full_eos!()
     clamp!(αs, 0, Inf)
 
     # make EOSes and write to file
+    # this EOS uses everything except the ideal gas EOS
     grideos = GridEOS(Ps, Ts, ρs)
+    # this EOS is the same, but adds the ideal gas below 100bar
     gridPlusIdeal = PressurePiecewiseEOS([water_idealgas, grideos], [0, 100e5, Inf])
     thermexp = GridEOS(Ps, Ts, αs)
     jldopen("$(WaterData.config.datadir)/eos-full.jld", "w") do file
