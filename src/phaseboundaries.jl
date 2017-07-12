@@ -25,7 +25,7 @@ function read_phase_boundary_table()
 end
 
 """Describes the T/P extent and shape parameters of a phase boundary"""
-immutable PhaseBoundaryPars
+struct PhaseBoundaryPars
     phase1::String
     phase2::String
     Tmin::Float64
@@ -46,9 +46,9 @@ function PhaseBoundaryPars(phase1::AbstractString, phase2::AbstractString)
     match22 = (table[:, 2] .== phase2)
     match21 = (table[:, 2] .== phase1)
     match12 = (table[:, 1] .== phase2)
-    matches_normal = match11 & match22
-    matches_reversed = match12 & match21
-    matches = matches_normal | matches_reversed
+    matches_normal = match11 .& match22
+    matches_reversed = match12 .& match21
+    matches = matches_normal .| matches_reversed
 
     row = table[matches, :]
     row[5:6] *= 1e5 # convert from bar to Pa
@@ -60,10 +60,10 @@ end
 # Phase boundary definitions
 
 "Holds details about the boundary between two phases"
-abstract PhaseBoundary
+abstract type PhaseBoundary end
 
 "A phase boundary following the formulation of Dunaeva et al"
-immutable DunaevaPhaseBoundary <: PhaseBoundary
+struct DunaevaPhaseBoundary <: PhaseBoundary
     P::Vector{Float64}
     T::Vector{Float64}
     pars::PhaseBoundaryPars
@@ -71,7 +71,7 @@ end
 PhaseBoundary(P::AbstractVector, T, pars) = DunaevaPhaseBoundary(collect(P), T, pars)
 
 "A phase boundary that doesn't follow the Dunaeva formulation"
-immutable OtherPhaseBoundary <: PhaseBoundary
+struct OtherPhaseBoundary <: PhaseBoundary
     P::Vector{Float64}
     T::Vector{Float64}
     spline::Spline1D

@@ -6,7 +6,7 @@ using Iterators: partition  # to split iterators
 # Custom exceptions
 
 "Error raised when a particular method needs to be implemented for some type"
-immutable NotImplementedError <: Exception; end
+mutable struct NotImplementedError <: Exception end
 
 
 # Duplicate-finding
@@ -27,7 +27,7 @@ unique_indices(itr) = indexin(collect(unique(itr)), collect(itr))
 
 # Miscellaneous utility funcs
 
-typealias VectorPair{T} NTuple{2, Vector{T}}
+const VectorPair{T} = NTuple{2, Vector{T}}
 
 """ Map a function `f` across rows of the array `A`
 

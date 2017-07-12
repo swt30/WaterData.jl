@@ -7,14 +7,14 @@ export PressurePiecewiseEOS, StitchedEOS
 
 
 # This EOS is used for signalling we're outside the domain
-immutable OutOfDomainEOS <: EOS; end
+struct OutOfDomainEOS <: EOS end
 (::OutOfDomainEOS)(args...) = throw(DomainError())
 
 
 # Piecewise one-dimensional EOS
 
 "Equation of state which is stored piecewise in some coordinate"
-abstract PiecewiseEOS <: EOS
+abstract type PiecewiseEOS <: EOS end
 
 """ Equation of state which is stored piecewise in the pressure coordinate
 
@@ -26,7 +26,7 @@ abstract PiecewiseEOS <: EOS
 
     Calling the `PressurePiecewiseEOS` will evaluate the correct EOS at a given
     pressure. """
-immutable PressurePiecewiseEOS <: PiecewiseEOS
+struct PressurePiecewiseEOS <: PiecewiseEOS
     eoses::Vector{EOS}
     edges::Vector{Float64}
 
@@ -133,7 +133,7 @@ end
 # Stitched (piecewise 2D) EOS
 
 "Equation of state which consists of several other EOS stitched together"
-type StitchedEOS <: EOS
+mutable struct StitchedEOS <: EOS
     eoses::Vector{EOS}
 end
 StitchedEOS(a::EOS, b...) = StitchedEOS([a, b...])

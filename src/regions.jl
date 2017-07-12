@@ -6,10 +6,10 @@ using VoronoiDelaunay  # for creating Delaunay meshes on unstructured data
 # Region types
 
 "A region on the plane"
-abstract Region
+abstract type Region end
 
 "A boxed region [`xmin`, `xmax`] ⊗ [`ymin`, `ymax`]"
-immutable BoundingBox <: Region
+struct BoundingBox <: Region
     xmin::Float64
     xmax::Float64
     ymin::Float64
@@ -20,7 +20,7 @@ end
 
     For example, Polygon([0, 1, 1, 0], [0, 0, 1, 1]) defines the unit square.
     """
-immutable Polygon <: Region
+struct Polygon <: Region
     x::Vector{Float64}
     y::Vector{Float64}
     boundingbox::BoundingBox
@@ -74,18 +74,18 @@ norm12(x::Vector) = norm12(x, extrema(x)...)
 unnorm(x, lb, ub) = (x - min_coord) / (max_coord - min_coord) .* (ub - lb) + lb
 
 "Map the log of `x` from [`lb`, `ub`] to the interval (1.0, 2.0)"
-lognorm12(x, lb, ub) = norm12(log10(x), log10(lb), log10(ub))
+lognorm12(x, lb, ub) = norm12(log10.(x), log10(lb), log10(ub))
 
 "Map the log of the vector `x` to the interval (1.0, 2.0)"
-lognorm12(x::Vector) = norm12(log10(x))
+lognorm12(x::Vector) = norm12(log10.(x))
 
 "Map the log of `x` from (1.0, 2.0) back to [`lb`, `ub`]"
-unlognorm(x, lb, ub) = 10^unnorm(x, log10(lb), log10(ub))
+unlognorm(x, lb, ub) = 10.^unnorm(x, log10(lb), log10(ub))
 
 
 # Tessellations
 
-typealias Tessellation DelaunayTessellation2D
+const Tessellation = DelaunayTessellation2D
 
 BoundingBox(t::Tessellation) = BoundingBox(min_coord, max_coord, min_coord, max_coord)
 

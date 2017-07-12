@@ -8,29 +8,29 @@ export HeatCapacity, GridHeatCapacity
 # Types for different heat capacity behaviours
 
 "An isobaric heat capacity (cₚ)"
-abstract HeatCapacity
+abstract type HeatCapacity end
 "A heat capacity that's not constant"
-abstract VaryingHeatCapacity <: HeatCapacity
+abstract type VaryingHeatCapacity <: HeatCapacity end
 "A heat capacity that depends varies according to some functional form"
-abstract FunctionalHeatCapacity <: VaryingHeatCapacity
+abstract type FunctionalHeatCapacity <: VaryingHeatCapacity end
 
 "A constant heat capacity (no T/P variation)"
-immutable ConstantHeatCapacity{T<:Real} <: HeatCapacity
+struct ConstantHeatCapacity{T<:Real} <: HeatCapacity
     value::T
 end
 
 "A heat capacity which is a function of temperature"
-immutable TFuncHeatCapacity{F} <: FunctionalHeatCapacity
+struct TFuncHeatCapacity{F} <: FunctionalHeatCapacity
     func::F
 end
 
 "A heat capacity which is a function of pressure and temperature"
-immutable PTFuncHeatCapacity{F} <: FunctionalHeatCapacity
+struct PTFuncHeatCapacity{F} <: FunctionalHeatCapacity
     func::F
 end
 
 "A heat capacity interpolated from a log-linear grid"
-immutable GridHeatCapacity <: HeatCapacity
+struct GridHeatCapacity <: HeatCapacity
     P::Vector{Float64}
     T::Vector{Float64}
     spline::Spline2D

@@ -3,6 +3,7 @@
 using DataFrames  # for loading data in tabular format with headings
 using JLD  # for accessing data in .jld files (HDF5-based)
 using Roots: fzero  # for numerical inversion
+using QuadGK: quadgk  # for numerical integration
 
 # simple EOSes
 export ConstantEOS, PolytropicEOS, BME, BME3, BME4, Vinet, TFD
@@ -21,9 +22,9 @@ const inversion_ρ_range = [1e-3, 1e8]
 # Functional EOS type hierarchy
 
 "An EOS which calculates ρ by evaluating a function ρ = ρ(P[, T])"
-abstract FunctionalEOS <: EOS
+abstract type FunctionalEOS <: EOS end
 "An EOS which calculates ρ by numerically inverting a function P = P(ρ[, T])"
-abstract InverseFunctionalEOS <: FunctionalEOS
+abstract type InverseFunctionalEOS <: FunctionalEOS end
 
 # FIXME: this is a workaround for julia issue #14919
 "Declare that an EOS type is numerically inverted when called"
@@ -42,17 +43,17 @@ end
 # Specific EOSes
 
 "The ideal gas equation of state, where R is the specific gas constant"
-immutable IdealGas <: FunctionalEOS
+struct IdealGas <: FunctionalEOS
     R::Float64
 end
 
 "Equation of state for a constant-density substance"
-immutable ConstantEOS <: FunctionalEOS
+struct ConstantEOS <: FunctionalEOS
     ρ::Float64
 end
 
 "Choukroun and Grasset's cold ice EOS"
-immutable ChoukrounGrasset <: FunctionalEOS
+struct ChoukrounGrasset <: FunctionalEOS
     Pref::Float64
     Tref::Float64
     V₀::Float64
@@ -69,17 +70,17 @@ function get_choukroungrasset_pars(phase)
 end
 
 "The polytropic EOS, ρ(P) = ρ₀ + aρ^n"
-immutable PolytropicEOS <: FunctionalEOS
+struct PolytropicEOS <: FunctionalEOS
     ρ₀::Float64
     a::Float64
     n::Float64
 end
 
 "The Birch-Murnaghan EOS"
-abstract BME <: InverseFunctionalEOS
+abstract type BME <: InverseFunctionalEOS end
 
 "Third-order Birch-Murnaghan EOS"
-immutable BME3 <: BME
+struct BME3 <: BME
     ρ₀::Float64
     K₀::Float64
     dK₀::Float64
@@ -91,7 +92,7 @@ BME3(ρ₀, K₀, dK₀) = BME3(ρ₀, K₀, dK₀, inversion_ρ_range...)
 BME(ρ₀, K₀, dK₀) = BME3(ρ₀, K₀, dK₀)
 
 "Fourth-order Birch-Murnaghan EOS"
-immutable BME4 <: BME
+struct BME4 <: BME
     ρ₀::Float64
     K₀::Float64
     dK₀::Float64
@@ -104,7 +105,7 @@ BME(ρ₀, K₀, dK₀, d2K₀) = BME4(ρ₀, K₀, dK₀, d2K₀)
 @inverseEOS BME4
 
 "The Vinet EOS"
-immutable Vinet <: InverseFunctionalEOS
+struct Vinet <: InverseFunctionalEOS
     ρ₀::Float64
     K₀::Float64
     dK₀::Float64
@@ -115,7 +116,7 @@ Vinet(ρ₀, K₀, dK₀) = Vinet(ρ₀, K₀, dK₀, inversion_ρ_range...)
 @inverseEOS Vinet
 
 "The Thomas-Fermi-Dirac EOS"
-immutable TFD <: FunctionalEOS
+struct TFD <: FunctionalEOS
     Z::Vector{Int}
     A::Vector{Float64}
     n::Vector{Float64}
@@ -135,7 +136,7 @@ function TFD(Z::Integer, A)
 end
 
 "The IAPWS EOS, functional formulation"
-immutable IAPWS <: InverseFunctionalEOS
+struct IAPWS <: InverseFunctionalEOS
     c::Vector{Float64}
     d::Vector{Float64}
     t::Vector{Float64}
@@ -168,7 +169,7 @@ end
 
 
 "Wrapper for indicating that some `EOS` is bounded"
-immutable BoundedEOS{E<:EOS} <: EOS
+struct BoundedEOS{E<:EOS} <: EOS
     eos::E
     extent::Region
 end
@@ -176,7 +177,7 @@ BoundingBox(b::BoundedEOS) = BoundingBox(b.extent)
 
 
 "Wrapper for including thermal pressure with a BME or Vinet EOS"
-immutable MGDPressureEOS <: InverseFunctionalEOS
+struct MGDPressureEOS <: InverseFunctionalEOS
     eos::Union{BME, Vinet}
     T₀::Float64
     θD₀::Float64
@@ -428,25 +429,25 @@ function (eos::TFD)(P)
         P *= 10
 
         # pre-calculations
-        ζ   = (P / 9.524E13)^(1/5) .* Z.^(-2/3)
-        ϵ   = (3 ./(32π^2 .* Z.^2)).^(1/3)
-        ϕ   = (3^(1/3))/20 + ϵ./(4 .*(3 .^(1/3)))
-        α   = 1./(1.941E-2 - ϵ.^(1/2).*6.277E-2 + ϵ.*1.076)
-        x₀0 = (8.884E-3 + (ϵ.^(1/2)).*4.998E-1
-               + ϵ.*5.2604E-1).^(-1)
-        β₀ = x₀0.*ϕ - 1
-        β₁ = β₀.*α + ((1 + β₀)./ϕ)
+        ζ   = @. (P / 9.524E13)^(1/5) * Z^(-2/3)
+        ϵ   = @. (3 /(32π^2 * Z^2))^(1/3)
+        ϕ   = @. (3^(1/3))/20 + ϵ/(4 * (3^(1/3)))
+        α   = @. 1/(1.941E-2 - ϵ^(1/2)*6.277E-2 + ϵ*1.076)
+        x₀0 = @. (8.884E-3 + (ϵ^(1/2))*4.998E-1
+               + ϵ*5.2604E-1)^(-1)
+        β₀ = @. x₀0*ϕ - 1
+        β₁ = @. β₀*α + ((1 + β₀)/ϕ)
         β₂ = β_(2, ϵ)
         β₃ = β_(3, ϵ)
         β₄ = β_(4, ϵ)
         β₅ = β_(5, ϵ)
 
-        βζ = β₀ + β₁.*ζ + β₂.*ζ.^2 + β₃.*ζ.^3 + β₄.*ζ.^4 + β₅.*ζ.^5
+        βζ = @. β₀ + β₁*ζ + β₂*ζ^2 + β₃*ζ^3 + β₄*ζ^4 + β₅*ζ^5
 
-        x₀ = 1./(ζ + ϕ) .* (1 + exp(-α.*ζ).*βζ)
+        x₀ = @. 1/(ζ + ϕ) * (1 + exp(-α*ζ)*βζ)
 
         num = sum(n.*A)
-        denom = sum(n.*x₀.^3 ./ Z)
+        denom = sum(@. n*x₀^3 / Z)
         ρ = num/denom * 3.866
 
         # rho is in g/cm3 but we want it in kg/m3: 1 g/cm3 = 1000 kg/m3

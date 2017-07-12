@@ -5,7 +5,7 @@ export EOS, istempdependent
 
 # EOS type
 
-abstract EOS
+abstract type EOS end
 
 
 # Include EOS subsections

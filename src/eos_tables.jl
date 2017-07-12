@@ -11,10 +11,10 @@ export UnstructuredEOS, GridEOS, LineEOS
 # EOS types
 
 "Equation of state table"
-abstract TabularEOS <: EOS
+abstract type TabularEOS <: EOS end
 
 "Equation of state table defined by unstructured (P, T, ρ) points"
-immutable UnstructuredEOS <: TabularEOS
+struct UnstructuredEOS <: TabularEOS
     P::Vector{Float64}
     T::Vector{Float64}
     ρ::Vector{Float64}
@@ -27,7 +27,7 @@ immutable UnstructuredEOS <: TabularEOS
 end
 
 "Equation of state table defined on a (P, T) grid"
-immutable GridEOS <: TabularEOS
+struct GridEOS <: TabularEOS
     P::Vector{Float64}
     T::Vector{Float64}
     ρ::Matrix{Float64}
@@ -37,7 +37,7 @@ immutable GridEOS <: TabularEOS
 end
 
 "Equation of state table defined on a pressure grid"
-immutable LineEOS <: TabularEOS
+struct LineEOS <: TabularEOS
     P::Vector{Float64}
     ρ::Vector{Float64}
     spline::Spline1D
@@ -139,16 +139,16 @@ end
 function lognorm12(P, T, eos::TabularEOS)
     logP = log10(P)
     logT = log10(T)
-    xn = norm12(logP, extrema(log10(eos.P))...)
-    yn = norm12(logT, extrema(log10(eos.T))...)
+    xn = norm12(logP, extrema(log10.(eos.P))...)
+    yn = norm12(logT, extrema(log10.(eos.T))...)
 
     xn, yn
 end
 
 "Un-log-normalise `xn` and `yn` back to appropriate pressure and temperature ranges"
 function unlognorm(xn, yn, eos::TabularEOS)
-    logP = unnorm(xn, extrema(log10(eos.P))...)
-    logT = unnorm(yn, extrema(log10(eos.T))...)
+    logP = unnorm(xn, extrema(log10.(eos.P))...)
+    logT = unnorm(yn, extrema(log10.(eos.T))...)
     P = 10^logP
     T = 10^logT
 
