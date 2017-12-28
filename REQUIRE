@@ -3,7 +3,7 @@ julia 0.5
 # Data handling and wrangling
 JLD
 DataFrames
-Iterators
+IterTools
 
 # Interpolation and tessellation
 VoronoiDelaunay

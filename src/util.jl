@@ -1,6 +1,6 @@
 # Utility functions used throughout the package
 
-using Iterators: partition  # to split iterators
+using IterTools: partition  # to split iterators
 
 
 # Custom exceptions
