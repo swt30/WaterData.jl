@@ -10,7 +10,7 @@ import WaterData
 """ A simple EOS to check thermal expansivity determination.
 
     ρ(P, T) = P^n * T^m so that αᵥ(P, T) = -m/T """
-type SimpleEOS <: WaterData.EOS
+mutable struct SimpleEOS <: WaterData.EOS
     n::Int
     m::Int
 end

@@ -4,7 +4,7 @@ import WaterData
 module test_eos_resources
 import WaterData
 
-type NoTempInfo <: WaterData.EOS; end
+mutable struct NoTempInfo <: WaterData.EOS; end
 notempinfo = NoTempInfo()
 
 end
