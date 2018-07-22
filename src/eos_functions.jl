@@ -127,7 +127,7 @@ struct TFD <: FunctionalEOS
     end
 end
 # default constructor
-function TFD(Z::Vector{Int}, A::Vector{T}, n=ones(length(Z))) where T<:Real
+function TFD(Z::Vector{Int}, A::Vector{<:Real}, n=ones(length(Z)))
     TFD(Z, Float64[A], n)
 end
 # coerce to arrays if necessary

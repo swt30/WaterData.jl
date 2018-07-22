@@ -9,13 +9,13 @@ module test_eos_combined_resources
 import WaterData
 
 "1D test EOS"
-mutable struct TestEOS1D <: WaterData.FunctionalEOS
+struct TestEOS1D <: WaterData.FunctionalEOS
     power::Int
 end
 (e::TestEOS1D)(P::Real) = P^(e.power)
 
 "2D test EOS"
-mutable struct TestEOS2D <: WaterData.FunctionalEOS
+struct TestEOS2D <: WaterData.FunctionalEOS
     power::Int
     add::Int
 end
