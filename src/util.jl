@@ -1,12 +1,22 @@
 # Utility functions used throughout the package
 
 using IterTools: partition  # to split iterators
+import DataFrames: DataFrame
+using uCSV  # for reading tabular data
 
+# replacement for DataFrames readtable
+function readtable(file)
+    DataFrame(uCSV.read(file,
+              trimwhitespace = true,
+              typedetectrows = 10,
+              header = 1,
+              comment = '#'))
+end
 
 # Custom exceptions
 
 "Error raised when a particular method needs to be implemented for some type"
-mutable struct NotImplementedError <: Exception end
+struct NotImplementedError <: Exception end
 
 
 # Duplicate-finding

@@ -3,6 +3,7 @@ julia 0.6
 # Data handling and wrangling
 JLD
 DataFrames
+uCSV
 IterTools
 
 # Interpolation and tessellation

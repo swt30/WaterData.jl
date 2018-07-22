@@ -1,6 +1,5 @@
 # Functional equations of state
 
-using DataFrames  # for loading data in tabular format with headings
 using JLD  # for accessing data in .jld files (HDF5-based)
 using Roots: fzero  # for numerical inversion
 using QuadGK: quadgk  # for numerical integration

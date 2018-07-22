@@ -1,6 +1,5 @@
 # Tabular equations of state
 
-using DataFrames  # for loading data in tabular format with headings
 using JLD  # for accessing data in .jld files (HDF5-based)
 using VoronoiDelaunay  # for making Delaunay meshes on unstructured data
 using Dierckx  # for interpolation

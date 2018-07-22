@@ -133,7 +133,7 @@ end
 # Stitched (piecewise 2D) EOS
 
 "Equation of state which consists of several other EOS stitched together"
-mutable struct StitchedEOS <: EOS
+struct StitchedEOS <: EOS
     eoses::Vector{EOS}
 end
 StitchedEOS(a::EOS, b...) = StitchedEOS([a, b...])
